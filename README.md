@@ -5,7 +5,7 @@ Written entirely in C using win32 for graphical related things.
 
 Passes all blargs cpu instruction tests, as well as memory access timing tests, still some
 problems in DMG acid2, right mole is still visible for some reason, but I personally don't
-find it the biggest deal. 
+find it to be that big a deal. 
 
 It still fails to run a few games, I have a collection of screenshots below to show some of
 the games that it does run that I took while playing them myself. Although, as I type this
