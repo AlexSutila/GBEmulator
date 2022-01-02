@@ -18,6 +18,8 @@ all source and header files as existing files in visual studio without any issue
 including the header files and source files folders as include directories, and lastly changing the
 subsystem to windows in the project properties worked fine for me.
 
+BE SURE to have a savs folder in the same directory as any ROMS.
+
 The only cartridge types I emulate as of right now are cartridges without memory bank controllers
 and cartridges with MBC1 chips. I plan on adding more in the future if I get around to it I
 suppose.
