@@ -3,7 +3,7 @@
 
 // falling_edge - num of falling edges at a certain 
 //		bit as 'old' is incremented to 'cur'
-#define falling_edge(old, cur, bit)		((cur >> (bit + 1)) - (old >> (bit + 1)));
+#define FALLING_EDGES(old, cur, bit)		((cur >> (bit + 1)) - (old >> (bit + 1)));
 #define OVERFLOW(old, cur)				(old > cur)
 
 // counter value bits for tima frequency
@@ -35,7 +35,7 @@ void timers_step(struct GB* gb, int cycles) {
 	}
 
 	// Detect falling edge at bit masked by freq_mask
-	int increment = falling_edge(old_counter, gb->timer.counter.value, freq_bit);
+	int increment = FALLING_EDGES(old_counter, gb->timer.counter.value, freq_bit);
 	gb->memory[0xFF05] += increment;
 
 	// Set interrupt bit if overflow
@@ -79,7 +79,7 @@ uint8_t TIMA_RB(struct GB* gb, uint8_t cycles)
 	}
 
 	// Detect falling edge at bit masked by freq_mask
-	int increment = falling_edge(gb->timer.counter.value, temp.counter.value, freq_bit);
+	int increment = FALLING_EDGES(gb->timer.counter.value, temp.counter.value, freq_bit);
 	uint8_t new_tima = gb->memory[0xFF05] + increment;
 
 	if (OVERFLOW(gb->memory[0xFF05], new_tima)) {

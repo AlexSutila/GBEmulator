@@ -330,12 +330,12 @@ void ppu_step(struct GB* gb, int cycles)
 }
 
 // Tile addressing modes for WIN/BG (LCDC bit 4)
-inline struct tileStruct* unsigned_tile_addressing(struct GB* gb, uint16_t map_base, uint8_t LY, int tileColumn) 
+struct tileStruct* unsigned_tile_addressing(struct GB* gb, uint16_t map_base, uint8_t LY, int tileColumn) 
 { // LCDC bit 4 = 1
 	uint8_t index = gb->memory[map_base + tileColumn + (((uint16_t)LY / 8) * 32)];
 	return &gb->memory[0x8000 + (uint16_t)index * 16];
 }
-inline struct tileStruct* signed_tile_addressing(struct GB* gb, uint16_t map_base, uint8_t LY, int tileColumn) 
+struct tileStruct* signed_tile_addressing(struct GB* gb, uint16_t map_base, uint8_t LY, int tileColumn) 
 { // LCDC bit 4 = 0
 	uint8_t index = gb->memory[map_base + tileColumn + (((uint16_t)LY / 8) * 32)];
 	// Byte must be converted to signed 16 bit value

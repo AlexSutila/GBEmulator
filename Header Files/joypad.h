@@ -41,5 +41,6 @@ struct joypad
 // Lmao, self explanitory
 void init_JOYP(struct joypad* joyp);
 void update_JOYP(struct GB* gb);
+void update_keyStates(struct GB* gb);
 
 #endif // _JOYPAD_H_

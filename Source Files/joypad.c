@@ -39,8 +39,60 @@ void init_JOYP(struct joypad* joyp)
 	joyp->keyStates[keyState_start] = 1 << 3;
 }
 
-// Updates the keystates
+// Updates the JOYP register itself + interrupt flag if necessary
 void update_JOYP(struct GB* gb)
+{
+	/* This old variable is used for determining if a falling edge has
+	*  occured somewhere within the first 4 bits of this register in 
+	*  order to set the joypad IF bit if necessary */
+	uint8_t old = gb->memory[0xFF00];
+	uint8_t temp = 0xFF;
+
+	switch (gb->joyp.mode)
+	{
+	case JOYP_MODE_ACTION:
+		temp &= ~gb->joyp.keyStates[keyState_A]; 
+		temp &= ~gb->joyp.keyStates[keyState_B]; 
+		temp &= ~gb->joyp.keyStates[keyState_select];
+		temp &= ~gb->joyp.keyStates[keyState_start];
+		// Update interrupt flag and invert result
+		if (temp & old) gb->memory[0xFF0F] |= 0x10;
+		temp = ~temp;
+		break;
+	case JOYP_MODE_DIRECTION:
+		temp &= ~gb->joyp.keyStates[keyState_right];
+		temp &= ~gb->joyp.keyStates[keyState_left];
+		temp &= ~gb->joyp.keyStates[keyState_up];
+		temp &= ~gb->joyp.keyStates[keyState_down];
+		// Update interrupt flag and invert result
+		if (temp & old) gb->memory[0xFF0F] |= 0x10;
+		temp = ~temp;
+		break;
+	case JOYP_MODE_BOTH:
+		// Update action
+		temp &= ~gb->joyp.keyStates[keyState_A];
+		temp &= ~gb->joyp.keyStates[keyState_B];
+		temp &= ~gb->joyp.keyStates[keyState_select];
+		temp &= ~gb->joyp.keyStates[keyState_start];
+		// Update direction
+		temp &= ~gb->joyp.keyStates[keyState_right];
+		temp &= ~gb->joyp.keyStates[keyState_left];
+		temp &= ~gb->joyp.keyStates[keyState_up];
+		temp &= ~gb->joyp.keyStates[keyState_down];
+		// Update interrupt flag and invert result
+		if (temp & old) gb->memory[0xFF0F] |= 0x10;
+		temp = ~temp;
+		break;
+		// In the case where neither direction or action is selected,
+		//		no bits should be pulled low, meaning ($FF00) = 0xFF
+	}
+
+	// Store updated result to register
+	gb->memory[0xFF00] = temp;
+}
+
+// Updates the keystates
+void update_keyStates(struct GB* gb)
 {
 	if (GetAsyncKeyState(KEY_W)) gb->joyp.keyStates[keyState_up] = 0;
 	else gb->joyp.keyStates[keyState_up] = 1 << 2;
@@ -65,48 +117,8 @@ void update_JOYP(struct GB* gb)
 	
 	if (GetAsyncKeyState(VK_RIGHT)) gb->joyp.keyStates[keyState_A] = 0;
 	else gb->joyp.keyStates[keyState_A] = 1;
-}
 
-uint8_t JOYP_RB(struct GB* gb, uint8_t cycles)
-{
-	// Update register - do this here rather than on read because it won't change
-	gb->memory[0xFF00] = 0xFF;
-	switch (gb->joyp.mode)
-	{
-	case JOYP_MODE_ACTION:
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_A];
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_B];
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_select];
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_start];
-		// Invert 
-		gb->memory[0xFF00] = ~gb->memory[0xFF00];
-		break;
-	case JOYP_MODE_DIRECTION:
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_right];
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_left];
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_up];
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_down];
-		// Invert 
-		gb->memory[0xFF00] = ~gb->memory[0xFF00];
-		break;
-	case JOYP_MODE_BOTH:
-		// Update action
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_A];
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_B];
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_select];
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_start];
-		// Update direction
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_right];
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_left];
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_up];
-		gb->memory[0xFF00] &= ~gb->joyp.keyStates[keyState_down];
-		// Invert 
-		gb->memory[0xFF00] = ~gb->memory[0xFF00];
-		break;
-		// In the case where neither direction or action is selected,
-		//		no bits should be pulled low, meaning ($FF00) = 0xFF
-	}
-	return gb->memory[0xFF00];
+	update_JOYP(gb);
 }
 
 void JOYP_WB(struct GB* gb, uint8_t val, uint8_t cycles)
@@ -128,4 +140,5 @@ void JOYP_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 		gb->joyp.mode = JOYP_MODE_NONE;
 		break;
 	}
+	update_JOYP(gb);
 }

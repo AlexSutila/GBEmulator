@@ -72,7 +72,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE pInstance, PWSTR cmdLine, int c
 	
 		// Push frame to screen also handles real time synchronization
 		draw_to_screen(&emulator, window, hdc);
-		update_JOYP(&emulator);
+		update_keyStates(&emulator);
 	}
 
 	gb_free(&emulator);
