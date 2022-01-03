@@ -225,7 +225,7 @@ void WB(struct GB* gb, uint16_t addr, uint8_t val, uint8_t cycles)
 	static const void (*IO_writes[128])(struct GB*, uint8_t, uint8_t) = {
 		/* 0xFF00 */ &JOYP_WB,
 		/* 0xFF01 */ NULL,
-		/* 0xFF02 */ NULL,
+		/* 0xFF02 */ &SC_WB,
 		/* 0xFF03 */ NULL,
 		/* 0xFF04 */ &DIV_WB,
 		/* 0xFF05 */ &TIMA_WB,

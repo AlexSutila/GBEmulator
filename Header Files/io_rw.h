@@ -14,6 +14,7 @@ uint8_t LY_RB(struct GB* gb, uint8_t cycles);					// $FF44
 
 // Writes
 void JOYP_WB(struct GB* gb, uint8_t val, uint8_t cycles);			// $FF00
+void SC_WB(struct GB* gb, uint8_t val, uint8_t cycles);             // $FF02
 void DIV_WB(struct GB* gb, uint8_t val, uint8_t cycles);			// $FF04
 void TIMA_WB(struct GB* gb, uint8_t val, uint8_t cycles);			// $FF05
 void TMA_WB(struct GB* gb, uint8_t val, uint8_t cycles);			// $FF06
