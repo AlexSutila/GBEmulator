@@ -60,6 +60,31 @@ void debug_deinit()
 	FreeConsole();
 }
 
+// Updates console buffer with contents from gb
+void refresh_console(struct GB* gb, HANDLE* hConsole, uint16_t memViewBase)
+{
+	// Update Register Values
+	swprintf(buffer + 125, 5, L"%04X", gb->cpu.AF);
+	swprintf(buffer + 134, 5, L"%04X", gb->cpu.BC);
+	swprintf(buffer + 143, 5, L"%04X", gb->cpu.DE);
+	swprintf(buffer + 245, 5, L"%04X", gb->cpu.HL);
+	swprintf(buffer + 254, 5, L"%04X", gb->cpu.SP);
+	swprintf(buffer + 263, 5, L"%04X", gb->cpu.PC);
+
+	// Update Memory View
+	for (int row = 5; row <= 20; row++) {
+		swprintf(buffer + 1 + (120 * row), 5, L"%02X%X-", memViewBase >> 8, row - 5);
+		for (int col = 0; col <= 0xF; col++) {
+			swprintf((120 * row) + (buffer + 6) + (col * 3), 3, L"%02X", RB(gb, memViewBase, 0));
+			memViewBase++;
+		}
+	}
+
+	// Write results to console buffer
+	WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH * CONSOLE_HEIGHT, (COORD) { 0, 0 }, & bytesWritten);
+}
+
+// Steps one instruction (copied from main)
 void step_emulation(struct GB* gb)
 {
 	// Execute instruction and record timing
@@ -92,25 +117,23 @@ void step_emulation(struct GB* gb)
 void debug_break(struct GB* gb, HANDLE* hConsole)
 {
 	char c = ' ';
+	static uint16_t memViewBase = 0x0000; 
+
 	while (c != 'c')
 	{
-		// Update Register Values
-		swprintf(buffer + 125, 5, L"%04X", gb->cpu.AF);
-		swprintf(buffer + 134, 5, L"%04X", gb->cpu.BC);
-		swprintf(buffer + 143, 5, L"%04X", gb->cpu.DE);
-		swprintf(buffer + 245, 5, L"%04X", gb->cpu.HL);
-		swprintf(buffer + 254, 5, L"%04X", gb->cpu.SP);
-		swprintf(buffer + 263, 5, L"%04X", gb->cpu.PC);
-
-		// Write results to console buffer
-		WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH * CONSOLE_HEIGHT, (COORD) { 0, 0 }, & bytesWritten);
-
+		refresh_console(gb, hConsole, memViewBase);
 		c = _getch();
 
 		switch (c)
 		{
 		case 'n': // Step emulation by one instruction
 			step_emulation(gb);
+			break;
+		case 'w': // Scroll memview up (decrement address)
+			memViewBase = (memViewBase != 0x0000) ? memViewBase - 0x0100 : memViewBase;
+			break;
+		case 's': // Scroll memview down (increment address)
+			memViewBase = (memViewBase != 0xFF00) ? memViewBase + 0x0100 : memViewBase;
 			break;
 		}
 	}

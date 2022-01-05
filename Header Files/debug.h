@@ -3,7 +3,6 @@
 
 void debug_init(HANDLE* hConsole);
 void debug_deinit();
-
 void debug_break(struct GB* gb, HANDLE* hConsole);
 
 #endif // _DEBUG_H_
