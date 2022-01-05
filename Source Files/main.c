@@ -83,6 +83,11 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE pInstance, PWSTR cmdLine, int c
 		// Push frame to screen also handles real time synchronization
 		draw_to_screen(&emulator, window, hdc);
 		update_keyStates(&emulator);
+
+		#ifndef NDEBUG
+		// Update debug info and show console if requested
+		if (GetAsyncKeyState(0x42)) debug_break(&emulator, &hConsole);
+		#endif
 	}
 
 	#ifndef NDEBUG
