@@ -1,6 +1,10 @@
 #include <Windows.h>
 #include "mem.h"
 
+#ifndef NDEBUG
+#include "debug.h"
+#endif
+
 // Global running parameter
 int running = 1;
 
@@ -31,10 +35,16 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE pInstance, PWSTR cmdLine, int c
 	windowClass.lpszClassName = className;
 
 	RegisterClass(&windowClass);
-
 	HWND window = CreateWindowEx(0, className, L"GameBoy Emulator", WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, (v_HRES + 4) * 4, (v_VRES + 10) * 4, 0, 0, instance, 0);
 	HDC hdc = GetDC(window);
 
+	// Debugger initialization
+	#ifndef NDEBUG
+	HANDLE hConsole;
+	debug_init(&hConsole);
+	#endif
+
+	// Emulator initialization
 	struct GB emulator;
 	gb_init(&emulator);
 
@@ -74,6 +84,10 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE pInstance, PWSTR cmdLine, int c
 		draw_to_screen(&emulator, window, hdc);
 		update_keyStates(&emulator);
 	}
+
+	#ifndef NDEBUG
+	debug_deinit();
+	#endif
 
 	gb_free(&emulator);
 	return 0;

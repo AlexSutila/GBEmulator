@@ -1,0 +1,57 @@
+#include <Windows.h>
+#include "debug.h"
+
+#define CONSOLE_WIDTH 120
+#define CONSOLE_HEIGHT 40
+
+static DWORD bytesWritten = 0;
+static wchar_t buffer[CONSOLE_WIDTH * CONSOLE_HEIGHT] = { 
+	L"                                                                                                                        "
+	L" AF: 0000 BC: 0000 DE: 0000   Flags: - - - -                                                                            "
+	L" HL: 0000 SP: 0000 PC: 0000   IME: 0                                                                                    "
+	L"                                                                                                                        "
+	L" MEM: -0 -1 -2 -3 -4 -5 -6 -7 -8 -9 -A -B -C -D -E -F                                                                   "
+	L" 000- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 001- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 002- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 003- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 004- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 005- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 006- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 007- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 008- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 009- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 00A- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 00B- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 00C- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 00D- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 00E- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 00F- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L"                                                                                                                        "
+	L"                                                                                                                        "
+	L"                                                                                                                        "
+	L"                                                                                                                        "
+	L"                                                                                                                        "
+	L"                                                                                                                        "
+	L"                                                                                                                        "
+	L"                                                                                                                        "
+	L"                                                                                                                        "
+};
+
+void debug_init(HANDLE* hConsole)
+{
+	// Create debugger console
+	AllocConsole();
+	DWORD id = GetCurrentProcessId();
+	AttachConsole(id);
+
+	// Initialize console buffer
+	*hConsole = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
+	SetConsoleActiveScreenBuffer(*hConsole);
+	WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH * CONSOLE_HEIGHT, (COORD){ 0,0 }, &bytesWritten);
+}
+
+void debug_deinit()
+{
+	FreeConsole();
+}
