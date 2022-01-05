@@ -18,6 +18,9 @@ all source and header files as existing files in visual studio without any issue
 including the header files and source files folders as include directories, and lastly changing the
 subsystem to windows in the project properties worked fine for me.
 
+As of right now, there is a console window that will appear for debug builds with a display of the
+registers and a chunk of memory. This debugger doesn't do anything yet and is a work in progress.
+
 BE SURE to have a savs folder in the same directory as any ROMS.
 
 The only cartridge types I emulate as of right now are cartridges without memory bank controllers
