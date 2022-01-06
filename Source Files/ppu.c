@@ -50,13 +50,6 @@
 #define INTMASK_SERIAL	0b00001000
 #define INTMASK_JOYPAD	0b00010000
 
-// BMI Struct
-struct bitmapStruct
-{
-	BITMAPINFO bmi;
-	unsigned char palette[256];
-};
-
 // Forward declaration
 void draw_to_screen(struct GB*, HWND window, HDC hdc);
 void draw_scanline(struct GB*, uint8_t* bitmapPtr);

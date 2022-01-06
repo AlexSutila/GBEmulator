@@ -86,7 +86,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE pInstance, PWSTR cmdLine, int c
 
 		#ifndef NDEBUG
 		// Update debug info and show console if requested
-		if (GetAsyncKeyState(0x42)) debug_break(&emulator, &hConsole);
+		if (GetAsyncKeyState(0x42)) debug_break(&emulator, &hConsole, window, hdc);
 		#endif
 	}
 

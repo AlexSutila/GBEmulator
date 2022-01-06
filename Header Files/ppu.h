@@ -69,6 +69,13 @@ struct tileStruct
     uint8_t bytes[8][2];
 };
 
+// BMI Struct
+struct bitmapStruct
+{
+	BITMAPINFO bmi;
+	unsigned char palette[256];
+};
+
 // Basic PPU functions
 void init_ppu(struct PPU* ppu);
 void ppu_step(struct GB* gb, int cycles);
