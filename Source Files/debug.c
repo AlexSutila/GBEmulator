@@ -12,7 +12,7 @@
 static DWORD bytesWritten = 0;
 static wchar_t buffer[CONSOLE_WIDTH * CONSOLE_HEIGHT] = { 
 	L"                                                                                                                        "
-	L" AF: 0000 BC: 0000 DE: 0000   Flags: - - - - - - - -                                                                    "
+	L" AF: 0000 BC: 0000 DE: 0000   Flags: - - - - - - - -    Current Instruction:                                            "
 	L" HL: 0000 SP: 0000 PC: 0000   IME: 0      Halted: 0                                                                     "
 	L"                                                                                                                        "
 	L" MEM: -0 -1 -2 -3 -4 -5 -6 -7 -8 -9 -A -B -C -D -E -F                                                                   "
@@ -590,7 +590,7 @@ void disassemble(struct GB* gb, wchar_t instrBuf[25], uint16_t addr)
 	}
 	else 
 	{
-		// This is disgusting but it works for now
+		// swprintf includes a null terminator
 		wcscpy(instrBuf, lookup[opcode]);
 		wchar_t* imm = wcsstr(instrBuf, L"####");
 		if (imm != NULL) {
@@ -662,7 +662,7 @@ void refresh_console(struct GB* gb, HANDLE* hConsole, uint16_t memViewBase)
 	}
 
 	// Update disassembler
-	disassemble(gb, buffer + 175, gb->cpu.PC);
+	disassemble(gb, buffer + 197, gb->cpu.PC);
 
 	// Write results to console buffer
 	WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH * CONSOLE_HEIGHT, (COORD) { 0, 0 }, & bytesWritten);

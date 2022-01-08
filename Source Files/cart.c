@@ -6,6 +6,7 @@
 
 uint8_t memAccess_NOMBC(struct cartridge* cart_ptr, uint16_t addr, uint8_t val, uint8_t rw);
 uint8_t memAccess_MBC1(struct cartridge* cart_ptr, uint16_t addr, uint8_t val, uint8_t rw);
+uint8_t memAccess_MBC3(struct cartridge* cart_ptr, uint16_t addr, uint8_t val, uint8_t rw);
 
 enum cart_info_addresses {
 	addrTitle		= 0x0134,
@@ -21,10 +22,11 @@ enum cart_types {
 	type_mbc1			= 0x01,
 	type_mbc1_ram		= 0x02,
 	type_mbc1_ram_batt	= 0x03,
-	type_mbc2			= 0x05,
-	type_mbc2_batt		= 0x06,
 	type_rom_ram		= 0x08,
 	type_rom_ram_batt	= 0x09,
+	type_mbc3			= 0x11,
+	type_mbc3_ram		= 0x12,
+	type_mbc3_ram_batt	= 0x13,
 	/* More I may or may not implement */
 };
 
@@ -63,6 +65,12 @@ int init_cart(struct cartridge* cart_ptr, char* rom_dir)
 		case type_mbc1_ram_batt:
 			cart_ptr->memAccess = &memAccess_MBC1;
 			break;
+		case type_mbc3:
+		case type_mbc3_ram:
+		case type_mbc3_ram_batt:
+			cart_ptr->memAccess = &memAccess_MBC3;
+			break;
+		
 		default:
 			// -1 return type indicates invalid/unimplemented cart type
 			fclose(rom_file);
@@ -155,7 +163,7 @@ int init_cart(struct cartridge* cart_ptr, char* rom_dir)
 		nt_title[i + 4] = '\0';
 
 		if (cart_ptr->cartType == type_mbc1_ram_batt ||
-			cart_ptr->cartType == type_mbc2_batt ||
+			cart_ptr->cartType == type_mbc3_ram_batt ||
 			cart_ptr->cartType == type_rom_ram_batt) {
 
 			FILE* sav_file = fopen(nt_title, "rb");
@@ -208,8 +216,8 @@ void free_cart(struct cartridge* cart_ptr)
 
 	// Dump ram contents
 	FILE* sav_file = fopen(nt_title, "wb");
-	if (cart_ptr->cartType == type_mbc1_ram_batt || 
-		cart_ptr->cartType == type_mbc2_batt     ||
+	if (cart_ptr->cartType == type_mbc1_ram_batt ||
+		cart_ptr->cartType == type_mbc3_ram_batt ||
 		cart_ptr->cartType == type_rom_ram_batt  )
 		switch (cart_ptr->ramSize) 
 		{
@@ -234,22 +242,20 @@ void free_cart(struct cartridge* cart_ptr)
 	free(cart_ptr->RAM_full);
 }
 
-
+//////////////////////////////////////////////////////////////////////////////////////////////
 
 uint8_t memAccess_NOMBC(struct cartridge* cart_ptr, uint16_t addr, uint8_t val, uint8_t rw)
 {
 	if (rw == CART_READ)
 	{
-		switch (addr & 0xF000)
-		{
-		case 0x0000: case 0x1000: case 0x2000: case 0x3000:
-		case 0x4000: case 0x5000: case 0x6000: case 0x7000:
+		// ROM
+		if (addr >= 0x0000 && addr < 0x8000)
 			return cart_ptr->ROM00_ptr[addr];
-		case 0xA000: case 0xB000:
+		// RAM, if existent
+		else if (addr >= 0xA000 && addr < 0xC000) 
+		{
 			if (cart_ptr->ramSize != ramSize_NONE)
-			{
 				return cart_ptr->RAM_ptr[addr - s_ERAM];
-			}
 			else return 0xFF;
 		}
 	}
@@ -270,62 +276,59 @@ uint8_t memAccess_MBC1(struct cartridge* cart_ptr, uint16_t addr, uint8_t val, u
 {
 	// Cartridge properties
 	static uint8_t ramEnable = 0x00;
-	static uint8_t romBank_lo = 0x01;
+	static uint8_t romBank_lo = 0x01; 
 	static uint8_t romBank_hi = 0x00;
 	static uint8_t bankMode = 0x00;
 
 	if (rw == CART_READ)
 	{
-		switch (addr & 0xF000)
+		// ROM - lower selected bank
+		if (addr >= 0x0000 && addr < 0x4000)
+			return cart_ptr->ROM00_ptr[addr];
+		// ROM - upper selected bank
+		else if (addr >= 0x4000 && addr < 0x8000)
+			return cart_ptr->ROMnn_ptr[addr - 0x4000];
+		// RAM - only selected bank assuming it has ram
+		else if (addr >= 0xA000 && addr < 0xC000) 
 		{
-			// ROM - lower selected bank
-			case 0x0000: case 0x1000: case 0x2000: case 0x3000:
-				return cart_ptr->ROM00_ptr[addr];
-			// ROM - upper selected bank
-			case 0x4000: case 0x5000: case 0x6000: case 0x7000:
-				return cart_ptr->ROMnn_ptr[addr - 0x4000];
-			// RAM - only selected bank assuming it has ram
-			case 0xA000: case 0xB000:
-				if (ramEnable == 0x0A && cart_ptr->ramSize != ramSize_NONE) {
-					return cart_ptr->RAM_ptr[addr - 0xA000];
-				} else return 0x00;
-				break;
+			// specifically 0x0A enables ram for some reason
+			if (ramEnable == 0x0A && cart_ptr->ramSize != ramSize_NONE)
+				return cart_ptr->RAM_ptr[addr - 0xA000];
+			else return 0xFF;
 		}
 	}
 	else /* rw == CART_WRITE */
 	{
-		switch (addr & 0xF000)
+		// RAM enable register
+		if (addr >= 0x0000 && addr < 0x2000)
 		{
-			// RAM enable register
-			case 0x0000: case 0x1000:
-				ramEnable = val & 0xF;
-				return 0xFF; // Irrelevant value
-			// ROM bank number
-			case 0x2000: case 0x3000:
-				if ((val & 0x1F) == 0x00) val++;
-				switch (cart_ptr->romSize)
-				{
-					case romSize_32KB:  romBank_lo = val & 0x01; break;
-					case romSize_64KB:  romBank_lo = val & 0x03; break;
-					case romSize_128KB: romBank_lo = val & 0x07; break;
-					case romSize_256KB: romBank_lo = val & 0x0F; break;
-					default:            romBank_lo = val & 0x1F; break;
-				}
-				break;
-			// RAM bank number
-			case 0x4000: case 0x5000:
-				romBank_hi = val & 0x3;
-				break;
-			// Banking mode select
-			case 0x6000: case 0x7000:
-				bankMode = val & 0x1;
-				break;
-			// Just write to ram, assuming it exists and its enabled
-			case 0xA000: case 0xB000:
-				if ((ramEnable == 0x0A) && (cart_ptr->ramSize != ramSize_NONE))
-					cart_ptr->RAM_ptr[addr - 0xA000] = val;
-				break;
+			ramEnable = val & 0xF;
+			return 0xFF; // Value irrelevant, reconfiguration of everything
+			             //		farther down can be skipped
 		}
+		// ROM bank number
+		else if (addr >= 0x2000 && addr < 0x4000)
+		{
+			if ((val & 0x1F) == 0x00) val++;
+			switch (cart_ptr->romSize)
+			{
+				case romSize_32KB:  romBank_lo = val & 0x01; break;
+				case romSize_64KB:  romBank_lo = val & 0x03; break;
+				case romSize_128KB: romBank_lo = val & 0x07; break;
+				case romSize_256KB: romBank_lo = val & 0x0F; break;
+				default:            romBank_lo = val & 0x1F; break;
+			}
+		}
+		// RAM bank number
+		else if (addr >= 0x4000 && addr < 0x6000)
+			romBank_hi = val & 0x3;
+		// Banking mode select
+		else if (addr >= 0x6000 && addr < 0x8000)
+			bankMode = val & 0x1;
+		// Write to ram if existant and enabled
+		else if (addr >= 0xA000 && addr < 0xC000)
+			if ((ramEnable == 0x0A) && (cart_ptr->ramSize != ramSize_NONE))
+				cart_ptr->RAM_ptr[addr - 0xA000] = val;
 
 		// Re-map 0x4000 - 0x7FFFF, this happens in either mode. Pandocs is wrong
 		uint8_t bank_number = romBank_lo;
@@ -353,7 +356,54 @@ uint8_t memAccess_MBC1(struct cartridge* cart_ptr, uint16_t addr, uint8_t val, u
 			cart_ptr->RAM_ptr = cart_ptr->RAM_full;
 		}
 	}
+	// Default return value
+	return 0xFF;
+}
 
+// Without timer, I might implement MBC3 with a timer later on because pokemon :D
+uint8_t memAccess_MBC3(struct cartridge* cart_ptr, uint16_t addr, uint8_t val, uint8_t rw)
+{
+	// Cart properties
+	static uint8_t ramEnable = 0x00;
+
+	if (rw == CART_READ)
+	{
+		// Low bank, always bank zero
+		if (addr >= 0x0000 && addr < 0x4000)
+			return cart_ptr->ROM_full[addr];
+		// Upper bank, now supports banks 20, 40, 60 etc
+		else if (addr >= 0x4000 && addr < 0x8000)
+			return cart_ptr->ROMnn_ptr[addr - 0x4000];
+		// RAM Bank, if any (00h - 03h only)
+		else if (addr >= 0xA000 && addr < 0xC000)
+		{
+			if ((ramEnable == 0x0A) && (cart_ptr->ramSize != ramSize_NONE))
+				return cart_ptr->RAM_ptr[addr - 0xA000];
+			else return 0xFF;
+		}
+	}
+	else /* rw == CART_WRITE */
+	{
+		// RAM enable
+		if (addr >= 0x0000 && addr < 0x2000)
+			ramEnable = val & 0xF;
+		// ROM bank number (7 bits)
+		else if (addr >= 0x2000 && addr < 0x4000)
+		{
+			val &= 0x7F; // Mapping this to bank zero not supported
+			if (!val) val++;
+			cart_ptr->ROMnn_ptr = cart_ptr->ROM_full + (n_ROM_NN * val);
+		}
+		// RAM bank number (2 bits)
+		else if (addr >= 0x4000 && addr < 0x6000)
+			cart_ptr->RAM_ptr = cart_ptr->RAM_full + (n_ERAM * (val & 0x3));
+		// Write to RAM banks, if enabled and existant
+		else if (addr >= 0xA000 && addr < 0xC000)
+		{
+			if ((ramEnable == 0x0A) && (cart_ptr->ramSize != ramSize_NONE))
+				cart_ptr->RAM_ptr[addr - 0xA000] = val;
+		}
+	}
 	// Default return value
 	return 0xFF;
 }
