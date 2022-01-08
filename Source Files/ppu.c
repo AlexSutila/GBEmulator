@@ -442,36 +442,38 @@ void draw_scanline(struct GB* gb, uint8_t* bitmapPtr)
 
 }
 
-// Pushes bitmap to screen, and synchronizes emulation to real time
+// Pushes bitmap to screen - also contains commented out code which
+//		synchronizes the emulation to real time around video. It is
+//		better to synchronize the emulation to audio, which I plan
+//		on doing. I will leave this here until I'm fully committed
+//		to my APU and I'm sure it won't cause any problems
 void draw_to_screen(struct GB* gb, HWND window, HDC hdc)
 {
 	gb->ppu.frameIncomplete = 1;
-	static LARGE_INTEGER start = { 0,0 };
+	// static LARGE_INTEGER start = { 0,0 };
 
 	// Push bitmap
 	gb->ppu.bitmap_PTR = (uint8_t*)gb->ppu.bitmap;
 	StretchDIBits(hdc, 0, 0, v_WIDTH, v_HEIGHT, 0, 0, v_HRES, v_VRES, gb->ppu.bitmap, &gb->ppu.bitmapBMI->bmi, DIB_RGB_COLORS, SRCCOPY);
 	
 	// Handle sync to video
-	LARGE_INTEGER end, frequency;
-	QueryPerformanceFrequency(&frequency);
-	QueryPerformanceCounter(&end);
-	float secsPerFrame = ((float)(end.QuadPart - start.QuadPart) / (float)frequency.QuadPart); 
-	while (secsPerFrame < 0.01666667f) {
-		QueryPerformanceCounter(&end);
-		secsPerFrame = ((float)(end.QuadPart - start.QuadPart) / (float)frequency.QuadPart);
-	}
-
-	// Handle the message thing
-	MSG msg;
-	while (PeekMessage(&msg, window, 0, 0, PM_REMOVE)) {
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
+	// LARGE_INTEGER end, frequency;
+	// QueryPerformanceFrequency(&frequency);
+	// QueryPerformanceCounter(&end);
+	// float secsPerFrame = ((float)(end.QuadPart - start.QuadPart) / (float)frequency.QuadPart); 
+	// while (secsPerFrame < 0.01666667f) {
+	// 	QueryPerformanceCounter(&end);
+	// 	secsPerFrame = ((float)(end.QuadPart - start.QuadPart) / (float)frequency.QuadPart);
+	// }
+	// MSG msg;
+	// while (PeekMessage(&msg, window, 0, 0, PM_REMOVE)) {
+	// 	TranslateMessage(&msg);
+	// 	DispatchMessage(&msg);
+	// }
 
 	// Reset starting timer and internal counter for WL
 	gb->ppu.win_LY = 0x00;
-	QueryPerformanceCounter(&start);
+	// QueryPerformanceCounter(&start);
 }
 
 // PPU Lookahead Reads

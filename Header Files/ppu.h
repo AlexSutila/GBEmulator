@@ -1,7 +1,7 @@
 #ifndef PPU_H_
 #define PPU_H_
 
-#include <Windows.h> // Bad practice, I know. It works right now so idc
+#include <Windows.h>
 
 /*
 	Bit 6 - LYC=LY STAT Interrupt source         (1=Enable) (Read/Write)
