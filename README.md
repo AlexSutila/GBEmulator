@@ -1,6 +1,6 @@
 # GameBoyEmulator
 
-My okay third honest and most successful attempt at creating a gameboy emulator.
+My third honest and most successful attempt at creating a gameboy emulator.
 Written entirely in C using win32 for graphical related things.
 
 Passes all blargs cpu instruction tests, as well as memory access timing tests, still some
