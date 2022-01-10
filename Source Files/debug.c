@@ -22,7 +22,7 @@ static wchar_t buffer[CONSOLE_WIDTH * CONSOLE_HEIGHT] = {
 	L" 003- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
 	L" 004- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
 	L" 005- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 006- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
+	L" 006- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   >>                                                              "
 	L" 007- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
 	L" 008- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
 	L" 009- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
@@ -31,7 +31,7 @@ static wchar_t buffer[CONSOLE_WIDTH * CONSOLE_HEIGHT] = {
 	L" 00C- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
 	L" 00D- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
 	L" 00E- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 00F- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   >>                                                              "
+	L" 00F- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
 	L"                                                                                                                        "
 	L" JOYP: 00    DMA: 00             IE    IF                                                                               "
 	L"  DIV: 00     LY: 00   VBLNK:                                                                                           "
@@ -569,11 +569,17 @@ static const struct instruction lookup_CB[256] = {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Given address of instruction, return address of previous instruction
+//		this is not unfortunetally is not exact
 inline uint16_t prevInstruction(struct GB* gb, uint16_t addr)
 {
-	// TODO: Implement this, its a little more complicated then nextInstruction
-	//			but it should still be fairly simple
-	return 0x0000;
+	uint8_t opcode = RB(gb, addr - 3, 0);
+	if (lookup[opcode].byteCount == 3) return addr - 3;
+
+	opcode = RB(gb, addr - 2, 0);
+	if (opcode == 0xCB || lookup[opcode].byteCount == 2)
+		return addr - 2;
+
+	return addr - 1;
 }
 
 // Given address of instruction, return address of next instruction
@@ -690,18 +696,18 @@ void refresh_console(struct GB* gb, HANDLE* hConsole, uint16_t memViewBase)
 	}
 
 	// Update disassembler
-	disassemble(gb, buffer + 2459, gb->cpu.PC);
-	int buf_pos = 2698; // To update following instructions
+	disassemble(gb, buffer + 1379, gb->cpu.PC);
+	int buf_pos = 1498; // To update following instructions
 	uint16_t nextAddr = nextInstruction(gb, gb->cpu.PC);
-	for (int i = 0; i < 7; i++) 
+	for (int i = 0; i < 9; i++) 
 	{
 		disassemble(gb, buffer + buf_pos, nextAddr);
 		nextAddr = nextInstruction(gb, nextAddr);
 		buf_pos += 120;
 	}
-	buf_pos = 2218; // To update the previous instructions
+	buf_pos = 1258; // To update the previous instructions
 	nextAddr = prevInstruction(gb, gb->cpu.PC);
-	for (int i = 0; i < 15; i++)
+	for (int i = 0; i < 8; i++)
 	{
 		disassemble(gb, buffer + buf_pos, nextAddr);
 		nextAddr = prevInstruction(gb, nextAddr);
