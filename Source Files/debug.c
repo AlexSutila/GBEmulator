@@ -14,32 +14,32 @@ static wchar_t buffer[CONSOLE_WIDTH * CONSOLE_HEIGHT] = {
 	L"                                                                                                                        "
 	L" AF: 0000 BC: 0000 DE: 0000   Flags: - - - - - - - -    Disassembly:                                                    "
 	L" HL: 0000 SP: 0000 PC: 0000   IME: 0      Halted: 0                                                                     "
+	L"                                                          NOP                                                           "
+	L" MEM: -0 -1 -2 -3 -4 -5 -6 -7 -8 -9 -A -B -C -D -E -F     NOP                                                           "
+	L" 000- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     NOP                                                           "
+	L" 001- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     NOP                                                           "
+	L" 002- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     NOP                                                           "
+	L" 003- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     NOP                                                           "
+	L" 004- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     NOP                                                           "
+	L" 005- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     NOP                                                           "
+	L" 006- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   >> NOP                                                          "
+	L" 007- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     NOP                                                           "
+	L" 008- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     NOP                                                           "
+	L" 009- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     NOP                                                           "
+	L" 00A- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     NOP                                                           "
+	L" 00B- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     NOP                                                           "
+	L" 00C- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     NOP                                                           "
+	L" 00D- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     NOP                                                           "
+	L" 00E- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     NOP                                                           "
+	L" 00F- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     NOP                                                           "
 	L"                                                                                                                        "
-	L" MEM: -0 -1 -2 -3 -4 -5 -6 -7 -8 -9 -A -B -C -D -E -F                                                                   "
-	L" 000- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 001- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 002- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 003- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 004- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 005- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 006- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   >>                                                              "
-	L" 007- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 008- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 009- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 00A- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 00B- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 00C- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 00D- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 00E- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L" 00F- 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00                                                                   "
-	L"                                                                                                                        "
-	L" JOYP: 00    DMA: 00             IE    IF                                                                               "
-	L"  DIV: 00     LY: 00   VBLNK:                                                                                           "
-	L" TIMA: 00    LYC: 00    STAT:                                                                                           "
-	L"  TMA: 00     WY: 00   TIMER:                                                                                           "
-	L"  TAC: 00     WX: 00   SRIAL:                                                                                           "
-	L" LCDC: 00    SCY: 00    JOYP:                                                                                           "
-	L" STAT: 00    SCX: 00                                                                                                    "
+	L" JOYP: 00    DMA: 00             IE    IF               Breakpoints:                                                    "
+	L"  DIV: 00     LY: 00   VBLNK:                            1:                                                             "
+	L" TIMA: 00    LYC: 00    STAT:                            2:                                                             "
+	L"  TMA: 00     WY: 00   TIMER:                            3:                                                             "
+	L"  TAC: 00     WX: 00   SRIAL:                            4:                                                             "
+	L" LCDC: 00    SCY: 00    JOYP:                            5:                                                             "
+	L" STAT: 00    SCX: 00                                     6:                                                             "
 	L"                                                                                                                        "
 };
 
@@ -49,6 +49,9 @@ struct instruction
 	int byteCount; // Instruction length
 };
 
+// '##'   - Immediate value
+// '####' - Immediate address
+// '&&&&' - Signed offset + addr
 static const struct instruction lookup[256] = {
 	{ L"NOP",				1 },
 	{ L"LD BC,$####",		3 },
@@ -74,7 +77,7 @@ static const struct instruction lookup[256] = {
 	{ L"DEC D",				1 },
 	{ L"LD D,$##",			2 },
 	{ L"RL A",				1 },
-	{ L"JR $##",			2 },
+	{ L"JR $&&&&",			2 },
 	{ L"ADD HL,DE",			1 },
 	{ L"LD A,(DE)",			1 },
 	{ L"DEC DE",			1 },
@@ -82,7 +85,7 @@ static const struct instruction lookup[256] = {
 	{ L"DEC E",				1 },
 	{ L"LD E,$##",			2 },
 	{ L"RR A",				1 },
-	{ L"JR NZ,$##",			2 },
+	{ L"JR NZ,$&&&&",		2 },
 	{ L"LD HL,$####",		3 },
 	{ L"LDI (HL),A",		1 },
 	{ L"INC HL",			1 },
@@ -90,7 +93,7 @@ static const struct instruction lookup[256] = {
 	{ L"DEC H",				1 },
 	{ L"LD H,$##",			2 },
 	{ L"DAA",				1 },
-	{ L"JR Z,$##",			2 },
+	{ L"JR Z,$&&&&",		2 },
 	{ L"ADD HL,HL",			1 },
 	{ L"LDI A,(HL)",		1 },
 	{ L"DEC HL",			1 },
@@ -98,7 +101,7 @@ static const struct instruction lookup[256] = {
 	{ L"DEC L",				1 },
 	{ L"LD L,$##",			2 },
 	{ L"CPL",				1 },
-	{ L"JR NC,$##",			2 },
+	{ L"JR NC,$&&&&",		2 },
 	{ L"LD SP,$####",		3 },
 	{ L"LDD (HL),A",		1 },
 	{ L"INC SP",			1 },
@@ -106,7 +109,7 @@ static const struct instruction lookup[256] = {
 	{ L"DEC (HL)",			1 },
 	{ L"LD (HL),$##",		2 },
 	{ L"SCF",				1 },
-	{ L"JR C,$##",			2 },
+	{ L"JR C,$&&&&",		2 },
 	{ L"ADD HL,SP",			1 },
 	{ L"LDD A,(HL)",		1 },
 	{ L"DEC SP",			1 },
@@ -592,6 +595,50 @@ inline uint16_t nextInstruction(struct GB* gb, uint16_t addr)
 	return addr + cur_instr.byteCount;
 }
 
+
+void disassemble(struct GB* gb, wchar_t instrBuf[25], uint16_t addr)
+{
+	wmemset(instrBuf, ' ', 25);
+	uint8_t opcode = RB(gb, addr & 0xFFFF, 0);
+
+	if (opcode == 0xCB)
+	{
+		opcode = RB(gb, ++addr & 0xFFFF, 0);
+		wcscpy(instrBuf, lookup_CB[opcode].str);
+	}
+	else
+	{
+		// swprintf includes a null terminator
+		wcscpy(instrBuf, lookup[opcode].str);
+		wchar_t* imm = wcsstr(instrBuf, L"####");
+		if (imm != NULL) {
+			wchar_t temp[5];
+			uint16_t u16 = RB(gb, addr + 1, 0) | (RB(gb, addr + 2, 0) << 8);
+			swprintf(temp, 5, L"%04X", u16);
+			wmemcpy(imm, temp, 4);
+			return;
+		}
+		imm = wcsstr(instrBuf, L"##");
+		if (imm != NULL) {
+			wchar_t temp[3];
+			swprintf(temp, 3, L"%02X", RB(gb, ++addr, 0));
+			wmemcpy(imm, temp, 2);
+			return;
+		}
+		imm = wcsstr(instrBuf, L"&&&&");
+		if (imm != NULL) {
+			wchar_t temp[5];
+			int8_t offset = RB(gb, ++addr, 0);
+			// 2 bytes are read, so PC is incremented 
+			//		prior to the branch, if its taken
+			uint16_t u16 = ++addr + offset;
+			swprintf(temp, 5, L"%04X", u16);
+			wmemcpy(imm, temp, 4);
+			return;
+		}
+	}
+}
+
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void debug_init(HANDLE* hConsole)
@@ -612,37 +659,7 @@ void debug_deinit()
 	FreeConsole();
 }
 
-void disassemble(struct GB* gb, wchar_t instrBuf[25], uint16_t addr)
-{
-	wmemset(instrBuf, ' ', 25);
-	uint8_t opcode = RB(gb, addr & 0xFFFF, 0);
-
-	if (opcode == 0xCB)
-	{
-		opcode = RB(gb, ++addr & 0xFFFF, 0);
-		wcscpy(instrBuf, lookup_CB[opcode].str);
-	}
-	else 
-	{
-		// swprintf includes a null terminator
-		wcscpy(instrBuf, lookup[opcode].str);
-		wchar_t* imm = wcsstr(instrBuf, L"####");
-		if (imm != NULL) {
-			wchar_t temp[5];
-			uint16_t u16 = RB(gb, addr+1, 0) | (RB(gb, addr+2, 0) << 8);
-			swprintf(temp, 5, L"%04X", u16);
-			wmemcpy(imm, temp, 4);
-			return;
-		}
-		imm = wcsstr(instrBuf, L"##");
-		if (imm != NULL) {
-			wchar_t temp[3];
-			swprintf(temp, 3, L"%02X", RB(gb, ++addr, 0));
-			wmemcpy(imm, temp, 2);
-			return;
-		}
-	}
-}
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Updates console buffer with contents from gb
 void refresh_console(struct GB* gb, HANDLE* hConsole, uint16_t memViewBase)
@@ -705,7 +722,7 @@ void refresh_console(struct GB* gb, HANDLE* hConsole, uint16_t memViewBase)
 		nextAddr = nextInstruction(gb, nextAddr);
 		buf_pos += 120;
 	}
-	buf_pos = 1258; // To update the previous instructions
+	buf_pos = 1258; // To update the previous instructions - this could still use some work
 	nextAddr = prevInstruction(gb, gb->cpu.PC);
 	for (int i = 0; i < 8; i++)
 	{
@@ -756,6 +773,13 @@ void step_emulation(struct GB* gb, HWND window, HDC hdc)
 	}
 }
 
+void editBreakPoint(int breakPoint)
+{
+	// TODO: Implement this 
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void debug_break(struct GB* gb, HANDLE* hConsole, HWND window, HDC hdc)
 {
 	char c = ' ';
@@ -776,6 +800,10 @@ void debug_break(struct GB* gb, HANDLE* hConsole, HWND window, HDC hdc)
 			memViewBase = (memViewBase != 0x0000) ? memViewBase - 0x0100 : memViewBase; break;
 		case 's': // Scroll memview down (increment address)
 			memViewBase = (memViewBase != 0xFF00) ? memViewBase + 0x0100 : memViewBase; break;
+		case '1': case '2': case '3': // Add or remove break point
+		case '4': case '5': case '6':
+			editBreakPoint(c - 48 /* Convert from ascii to integer */);
+			break;
 		}
 	}
 }
