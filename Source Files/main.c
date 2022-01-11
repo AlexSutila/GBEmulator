@@ -44,7 +44,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE pInstance, PWSTR cmdLine, int c
 	// Debugger initialization
 	#ifndef NDEBUG
 	HANDLE hConsole;
-	debug_init(&hConsole);
+	struct breakpoint breakpoints[6];
+	debug_init(&hConsole, breakpoints);
 	#endif
 
 	// Emulator initialization
@@ -56,6 +57,17 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE pInstance, PWSTR cmdLine, int c
 	{
 		while (emulator.ppu.frameIncomplete) 
 		{
+			// Break if breakpoint reached
+			#ifndef NDEBUG
+			int breakpointHit = 0;
+			for (int i = 0; i < 6; i++)
+			{
+				if (breakpoints[i].enabled && breakpoints[i].addr == emulator.cpu.PC)
+					breakpointHit = 1;
+			}
+			if (breakpointHit) debug_break(&emulator, &hConsole, window, hdc, breakpoints);
+			#endif
+
 			// Execute instruction and record timing
 			struct instrTimingInfo timing = (emulator.cpu.halt != 1) ?
 				cpu_execute(&emulator) : (struct instrTimingInfo) { 4, 0 };
@@ -90,8 +102,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE pInstance, PWSTR cmdLine, int c
 		update_keyStates(&emulator);
 
 		#ifndef NDEBUG
-		// Update debug info and show console if requested
-		if (GetAsyncKeyState(0x42)) debug_break(&emulator, &hConsole, window, hdc);
+		// Update debug info and show console if requested (press B)
+		if (GetAsyncKeyState(0x42)) debug_break(&emulator, &hConsole, window, hdc, breakpoints);
 		#endif
 	}
 

@@ -7,9 +7,8 @@
 #include "mem.h"
 
 #define CONSOLE_WIDTH 120
-#define CONSOLE_HEIGHT 40
+#define CONSOLE_HEIGHT 40 
 
-static DWORD bytesWritten = 0;
 static wchar_t buffer[CONSOLE_WIDTH * CONSOLE_HEIGHT] = { 
 	L"                                                                                                                        "
 	L" AF: 0000 BC: 0000 DE: 0000   Flags: - - - - - - - -    Disassembly:                                                    "
@@ -641,7 +640,7 @@ void disassemble(struct GB* gb, wchar_t instrBuf[25], uint16_t addr)
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void debug_init(HANDLE* hConsole)
+void debug_init(HANDLE* hConsole, struct breakpoint* breakpoints)
 {
 	// Create debugger console
 	AllocConsole();
@@ -651,6 +650,15 @@ void debug_init(HANDLE* hConsole)
 	// Initialize console buffer
 	*hConsole = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
 	SetConsoleActiveScreenBuffer(*hConsole);
+
+	// Initialize break points
+	for (int i = 0; i < 6; i++)
+	{
+		breakpoints[i].enabled = 0;
+		breakpoints[i].addr = 0x0000;
+	}
+
+	DWORD bytesWritten = 0;
 	WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH * CONSOLE_HEIGHT, (COORD){ 0,0 }, &bytesWritten);
 }
 
@@ -732,7 +740,8 @@ void refresh_console(struct GB* gb, HANDLE* hConsole, uint16_t memViewBase)
 	}
 
 	// Write results to console buffer
-	WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH * CONSOLE_HEIGHT, (COORD) { 0, 0 }, & bytesWritten);
+	DWORD bytesWritten = 0;
+	WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH * CONSOLE_HEIGHT, (COORD) { 0, 0 }, &bytesWritten);
 }
 
 // Steps one instruction (Mostly copied from main)
@@ -773,14 +782,47 @@ void step_emulation(struct GB* gb, HWND window, HDC hdc)
 	}
 }
 
-void editBreakPoint(int breakPoint)
+// Not particularly trying to make this efficient
+void editBreakPoint(HANDLE* hConsole, struct breakpoint* breakpoints, int bp)
 {
-	// TODO: Implement this 
+	DWORD bytesWritten = 0;
+	int buf_pos = 2820 + (bp * 120);
+	if (breakpoints[bp].enabled)
+	{
+		wmemset(buffer + buf_pos, L' ', 5);
+		breakpoints[bp].enabled = 0; 
+	}
+	else
+	{
+		uint16_t addr = 0x0000;
+		*(buffer + buf_pos) = '$';
+		WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH * CONSOLE_HEIGHT, (COORD) { 0, 0 }, &bytesWritten);
+
+		int count = 3;
+		char c = ' ';
+		while (count >= 0) // Reads hex values and calculates break point address as they're entered
+		{
+			uint8_t offset = 0;
+			c = _getch();
+			
+			if      (c >= '0' && c <= '9') offset = 48;
+			else if (c >= 'a' && c <= 'f') offset = 87;
+			else if (c >= 'A' && c <= 'F') offset = 55;
+			else /* Non-hex value */       continue;
+
+			*(buffer + buf_pos + 4 - count) = c;
+			addr += ((uint16_t)(c - offset)) << (count * 4);
+			WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH* CONSOLE_HEIGHT, (COORD) { 0, 0 }, &bytesWritten);
+			count--;
+		}
+		breakpoints[bp].addr = addr;
+		breakpoints[bp].enabled = 1;
+	}
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void debug_break(struct GB* gb, HANDLE* hConsole, HWND window, HDC hdc)
+void debug_break(struct GB* gb, HANDLE* hConsole, HWND window, HDC hdc, struct breakpoint* breakpoints)
 {
 	char c = ' ';
 	static uint16_t memViewBase = 0x0000; 
@@ -789,7 +831,7 @@ void debug_break(struct GB* gb, HANDLE* hConsole, HWND window, HDC hdc)
 	{
 		refresh_console(gb, hConsole, memViewBase);
 		c = _getch();
-
+		
 		switch (c)
 		{
 		case 'n': // Step emulation by one instruction
@@ -802,7 +844,7 @@ void debug_break(struct GB* gb, HANDLE* hConsole, HWND window, HDC hdc)
 			memViewBase = (memViewBase != 0xFF00) ? memViewBase + 0x0100 : memViewBase; break;
 		case '1': case '2': case '3': // Add or remove break point
 		case '4': case '5': case '6':
-			editBreakPoint(c - 48 /* Convert from ascii to integer */);
+			editBreakPoint(hConsole, breakpoints, c - 49 /* Convert from ascii to integer */);
 			break;
 		}
 	}
