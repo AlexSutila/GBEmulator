@@ -20,13 +20,12 @@ I am currently working on a debugger to help me weed out a few occasional slip u
 games. If the project is built in release mode, this debugger will not appear, only in debug builds
 as I'm not entirely sure how it will affect performance when its finished. 
 
-![image](https://user-images.githubusercontent.com/96510931/148623056-9484449f-8a83-4933-80dd-1d57604a8148.png)
+![image](https://user-images.githubusercontent.com/96510931/148862785-39406d93-3f0e-483a-8719-a5cecfedb526.png)
 
-It can do the following:
-  break                         (b)
-  step instruction              (n)
-  step 100 instructions         (N)
-  scroll through memory view    (w/s)
+As of now, it can place break points, step through instructions one or a hundred at a time, and
+disassembly machine code correctly for the most part. Backwards disassembly is tricky, so it does
+not always get that right, but I'm fairly confident everything including and after the current
+instruction it is executing will be disassembled as intended. 
 
 The only cartridge types I emulate as of right now are cartridges without memory bank controllers,
 cartridges with MBC1 chips, and cartridges with MBC3 chips without real time clocks. I will still
