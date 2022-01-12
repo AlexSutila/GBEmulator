@@ -11,7 +11,7 @@
 
 static wchar_t buffer[CONSOLE_WIDTH * CONSOLE_HEIGHT] = { 
 	L"                                                                                                                        "
-	L" AF: 0000 BC: 0000 DE: 0000   Flags: - - - - - - - -    Disassembly:                                                    "
+	L" AF: 0000 BC: 0000 DE: 0000   Flags: - - - - - - - -    Disassembly:                         Call Stack:                "
 	L" HL: 0000 SP: 0000 PC: 0000   IME: 0      Halted: 0                                                                     "
 	L"                                                          NOP                                                           "
 	L" MEM: -0 -1 -2 -3 -4 -5 -6 -7 -8 -9 -A -B -C -D -E -F     NOP                                                           "
@@ -41,6 +41,7 @@ static wchar_t buffer[CONSOLE_WIDTH * CONSOLE_HEIGHT] = {
 	L" STAT: 00    SCX: 00                                     6:                                                             "
 	L"                                                                                                                        "
 };
+static struct callStack* callstack; // Extern from debug.h
 
 struct instruction
 {
@@ -568,7 +569,72 @@ static const struct instruction lookup_CB[256] = {
 	{ L"SET 7,A",		2 }
 };
 
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+
+void debug_init(HANDLE* hConsole, struct breakpoint* breakpoints)
+{
+	// Create debugger console
+	AllocConsole();
+	DWORD id = GetCurrentProcessId();
+	AttachConsole(id);
+
+	// Initialize console buffer
+	*hConsole = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
+	SetConsoleActiveScreenBuffer(*hConsole);
+
+	// Initialize call/return tracker
+	callstack = NULL;
+
+	// Initialize break points
+	for (int i = 0; i < 6; i++)
+	{
+		breakpoints[i].enabled = 0;
+		breakpoints[i].addr = 0x0000;
+	}
+
+	DWORD bytesWritten = 0;
+	WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH * CONSOLE_HEIGHT, (COORD){ 0,0 }, &bytesWritten);
+}
+
+void debug_deinit()
+{
+	FreeConsole();
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// call/return tracking
+
+void callStackPush(uint16_t addr)
+{
+	if (callstack == NULL)
+	{
+		callstack = (struct callStack*)malloc(sizeof(struct callStack));
+		callstack->entryNumber = 0;
+		callstack->addr = addr;
+		callstack->next = NULL;
+		callstack->prev = NULL;
+	}
+	else
+	{
+		callstack->next = (struct callStack*)malloc(sizeof(struct callStack));
+		callstack->next->entryNumber = callstack->entryNumber + 1;
+		callstack->next->prev = callstack;
+		callstack->next->next = NULL;
+		callstack->next->addr = addr;
+		callstack = callstack->next;
+	}
+}
+
+void callStackPop()
+{
+	if (callstack != NULL)
+	{
+		struct callStack* temp = callstack;
+		callstack = callstack->prev;
+		free(temp);
+	}
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// disassembler
 
 // Given address of instruction, return address of previous instruction
 //		this is not unfortunetally is not exact
@@ -593,7 +659,6 @@ inline uint16_t nextInstruction(struct GB* gb, uint16_t addr)
 
 	return addr + cur_instr.byteCount;
 }
-
 
 void disassemble(struct GB* gb, wchar_t instrBuf[25], uint16_t addr)
 {
@@ -638,36 +703,47 @@ void disassemble(struct GB* gb, wchar_t instrBuf[25], uint16_t addr)
 	}
 }
 
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// breakpoints
 
-void debug_init(HANDLE* hConsole, struct breakpoint* breakpoints)
+// Not particularly trying to make this efficient
+void editBreakPoint(HANDLE* hConsole, struct breakpoint* breakpoints, int bp)
 {
-	// Create debugger console
-	AllocConsole();
-	DWORD id = GetCurrentProcessId();
-	AttachConsole(id);
-
-	// Initialize console buffer
-	*hConsole = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
-	SetConsoleActiveScreenBuffer(*hConsole);
-
-	// Initialize break points
-	for (int i = 0; i < 6; i++)
-	{
-		breakpoints[i].enabled = 0;
-		breakpoints[i].addr = 0x0000;
-	}
-
 	DWORD bytesWritten = 0;
-	WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH * CONSOLE_HEIGHT, (COORD){ 0,0 }, &bytesWritten);
+	int buf_pos = 2820 + (bp * 120);
+	if (breakpoints[bp].enabled)
+	{
+		wmemset(buffer + buf_pos, L' ', 5);
+		breakpoints[bp].enabled = 0;
+	}
+	else
+	{
+		uint16_t addr = 0x0000;
+		*(buffer + buf_pos) = '$';
+		WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH * CONSOLE_HEIGHT, (COORD) { 0, 0 }, & bytesWritten);
+
+		int count = 3;
+		char c = ' ';
+		while (count >= 0) // Reads hex values and calculates break point address as they're entered
+		{
+			uint8_t offset = 0;
+			c = _getch();
+
+			if (c >= '0' && c <= '9') offset = 48;
+			else if (c >= 'a' && c <= 'f') offset = 87;
+			else if (c >= 'A' && c <= 'F') offset = 55;
+			else /* Non-hex value */       continue;
+
+			*(buffer + buf_pos + 4 - count) = c;
+			addr += ((uint16_t)(c - offset)) << (count * 4);
+			WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH * CONSOLE_HEIGHT, (COORD) { 0, 0 }, & bytesWritten);
+			count--;
+		}
+		breakpoints[bp].addr = addr;
+		breakpoints[bp].enabled = 1;
+	}
 }
 
-void debug_deinit()
-{
-	FreeConsole();
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// general
 
 // Updates console buffer with contents from gb
 void refresh_console(struct GB* gb, HANDLE* hConsole, uint16_t memViewBase)
@@ -739,6 +815,24 @@ void refresh_console(struct GB* gb, HANDLE* hConsole, uint16_t memViewBase)
 		buf_pos -= 120;
 	}
 
+	// Refresh call/return tracking
+	for (int i = 0; i <= 18; i++)
+		swprintf(buffer + 455 + (i * 120), 6, L"     ");
+	if (callstack != NULL)
+	{
+		int count = callstack->entryNumber > 18 ? 18 : callstack->entryNumber;
+		struct callStack* temp = callstack;
+		int cs_pos = 455 + (count * 120);
+
+		while (count >= 0)
+		{
+			swprintf(buffer + cs_pos, 6, L"$%04X", temp->addr);
+			temp = temp->prev;
+			cs_pos = cs_pos - 120;
+			count--;
+		}
+	}
+
 	// Write results to console buffer
 	DWORD bytesWritten = 0;
 	WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH * CONSOLE_HEIGHT, (COORD) { 0, 0 }, &bytesWritten);
@@ -782,45 +876,7 @@ void step_emulation(struct GB* gb, HWND window, HDC hdc)
 	}
 }
 
-// Not particularly trying to make this efficient
-void editBreakPoint(HANDLE* hConsole, struct breakpoint* breakpoints, int bp)
-{
-	DWORD bytesWritten = 0;
-	int buf_pos = 2820 + (bp * 120);
-	if (breakpoints[bp].enabled)
-	{
-		wmemset(buffer + buf_pos, L' ', 5);
-		breakpoints[bp].enabled = 0; 
-	}
-	else
-	{
-		uint16_t addr = 0x0000;
-		*(buffer + buf_pos) = '$';
-		WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH * CONSOLE_HEIGHT, (COORD) { 0, 0 }, &bytesWritten);
-
-		int count = 3;
-		char c = ' ';
-		while (count >= 0) // Reads hex values and calculates break point address as they're entered
-		{
-			uint8_t offset = 0;
-			c = _getch();
-			
-			if      (c >= '0' && c <= '9') offset = 48;
-			else if (c >= 'a' && c <= 'f') offset = 87;
-			else if (c >= 'A' && c <= 'F') offset = 55;
-			else /* Non-hex value */       continue;
-
-			*(buffer + buf_pos + 4 - count) = c;
-			addr += ((uint16_t)(c - offset)) << (count * 4);
-			WriteConsoleOutputCharacter(*hConsole, buffer, CONSOLE_WIDTH* CONSOLE_HEIGHT, (COORD) { 0, 0 }, &bytesWritten);
-			count--;
-		}
-		breakpoints[bp].addr = addr;
-		breakpoints[bp].enabled = 1;
-	}
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 
 void debug_break(struct GB* gb, HANDLE* hConsole, HWND window, HDC hdc, struct breakpoint* breakpoints)
 {
