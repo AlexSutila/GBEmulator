@@ -38,10 +38,11 @@ static wchar_t buffer[CONSOLE_WIDTH * CONSOLE_HEIGHT] = {
 	L"  TMA: 00     WY: 00   TIMER:                            3:                                                             "
 	L"  TAC: 00     WX: 00   SRIAL:                            4:                                                             "
 	L" LCDC: 00    SCY: 00    JOYP:                            5:                                                             "
-	L" STAT: 00    SCX: 00                                     6:                                                             "
+	L" STAT: 00    SCX: 00    clks:                            6:                                                             "
 	L"                                                                                                                        "
 };
 static struct callStack* callstack; // Extern from debug.h
+unsigned long tCycles;              // Extern from debug.h
 
 struct instruction
 {
@@ -573,6 +574,8 @@ static const struct instruction lookup_CB[256] = {
 
 void debug_init(HANDLE* hConsole, struct breakpoint* breakpoints)
 {
+	tCycles = 0;
+
 	// Create debugger console
 	AllocConsole();
 	DWORD id = GetCurrentProcessId();
@@ -599,6 +602,13 @@ void debug_init(HANDLE* hConsole, struct breakpoint* breakpoints)
 void debug_deinit()
 {
 	FreeConsole();
+
+	struct callStack* temp = callstack;
+	while (temp != NULL)
+	{
+		temp = temp->prev;
+		free(temp->next);
+	}
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// call/return tracking
@@ -787,6 +797,10 @@ void refresh_console(struct GB* gb, HANDLE* hConsole, uint16_t memViewBase)
 	buffer[3154] = (IE & 0x08) ? 'X' : '-'; buffer[3160] = (IF & 0x08) ? 'X' : '-';
 	buffer[3274] = (IE & 0x10) ? 'X' : '-'; buffer[3280] = (IF & 0x10) ? 'X' : '-';
 
+	// Update tCycle counter
+	swprintf(buffer + 3390, 11, L"          ");
+	swprintf(buffer + 3390, 11, L"%d", tCycles);
+
 	// Update Memory View
 	for (int row = 5; row <= 20; row++) {
 		swprintf(buffer + 1 + (120 * row), 5, L"%02X%X-", memViewBase >> 8, row - 5);
@@ -816,11 +830,11 @@ void refresh_console(struct GB* gb, HANDLE* hConsole, uint16_t memViewBase)
 	}
 
 	// Refresh call/return tracking
-	for (int i = 0; i <= 18; i++)
+	for (int i = 0; i <= 17; i++)
 		swprintf(buffer + 455 + (i * 120), 6, L"     ");
 	if (callstack != NULL)
 	{
-		int count = callstack->entryNumber > 18 ? 18 : callstack->entryNumber;
+		int count = callstack->entryNumber > 17 ? 17 : callstack->entryNumber;
 		struct callStack* temp = callstack;
 		int cs_pos = 455 + (count * 120);
 
@@ -874,6 +888,8 @@ void step_emulation(struct GB* gb, HWND window, HDC hdc)
 		StretchDIBits(hdc, 0, 0, v_WIDTH, v_HEIGHT, 0, 0, v_HRES, v_VRES, gb->ppu.bitmap, &gb->ppu.bitmapBMI->bmi, DIB_RGB_COLORS, SRCCOPY);
 		gb->ppu.frameIncomplete = 1;
 	}
+
+	tCycles += total;
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 

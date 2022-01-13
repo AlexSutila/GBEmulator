@@ -10,8 +10,9 @@ struct breakpoint
 	int enabled;
 };
 
-// I really do not want to pass this in as a parameter to functions as I don't even want the
-//		debugger to make it to any release builds, so for the sake of simplicity I'm using extern
+// I really do not want to pass these in as parameters to functions as I don't even want 
+//		or need debugging features to make it to release builds, so for the sake of simplicity
+//		I'm using extern variables
 struct callStack
 {
 	struct callStack *next, *prev;
@@ -19,6 +20,7 @@ struct callStack
 	uint16_t addr;
 } 
 extern *callstack;
+extern unsigned long tCycles;
 
 // Break for debugging
 void debug_break(struct GB* gb, HANDLE* hConsole, HWND window, HDC hdc, struct breakpoint* breakpoints);

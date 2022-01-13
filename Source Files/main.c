@@ -57,17 +57,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE pInstance, PWSTR cmdLine, int c
 	{
 		while (emulator.ppu.frameIncomplete) 
 		{
-			// Break if breakpoint reached
-			#ifndef NDEBUG
-			int breakpointHit = 0;
-			for (int i = 0; i < 6; i++)
-			{
-				if (breakpoints[i].enabled && breakpoints[i].addr == emulator.cpu.PC)
-					breakpointHit = 1;
-			}
-			if (breakpointHit) debug_break(&emulator, &hConsole, window, hdc, breakpoints);
-			#endif
-
 			// Execute instruction and record timing
 			struct instrTimingInfo timing = (emulator.cpu.halt != 1) ?
 				cpu_execute(&emulator) : (struct instrTimingInfo) { 4, 0 };
@@ -95,6 +84,19 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE pInstance, PWSTR cmdLine, int c
 			}
 			// I don't think precise timing with the APU is as important, still thinking
 			apu_step(&emulator, window, total);
+
+			// Break if bp reached, update cycle counter
+			#ifndef NDEBUG
+			tCycles += total;
+
+			int breakpointHit = 0;
+			for (int i = 0; i < 6; i++)
+			{
+				if (breakpoints[i].enabled && breakpoints[i].addr == emulator.cpu.PC)
+					breakpointHit = 1;
+			}
+			if (breakpointHit) debug_break(&emulator, &hConsole, window, hdc, breakpoints);
+			#endif
 		}
 	
 		// Push frame to screen also handles real time synchronization
