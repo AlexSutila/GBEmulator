@@ -121,7 +121,10 @@ void TMA_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 void TAC_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 {
 	timers_step(gb, cycles);
-	gb->memory[0xFF07] = val;
 
+	// Only first 3 bits are used
+	gb->memory[0xFF07] &= ~0x7;
+	gb->memory[0xFF07] |= (val & 0x7);
+	
 	gb->sync_sel = 2;
 }
