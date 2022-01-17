@@ -52,6 +52,7 @@ struct instruction
 
 // '##'   - Immediate value
 // '####' - Immediate address
+// '&&'   - Signed offset
 // '&&&&' - Signed offset + addr
 static const struct instruction lookup[256] = {
 	{ L"NOP",				1 },
@@ -286,7 +287,7 @@ static const struct instruction lookup[256] = {
 	{ L"PUSH HL",			1 },
 	{ L"AND $##",			2 },
 	{ L"RST 20",			1 },
-	{ L"ADD SP,d",			1 },
+	{ L"ADD SP,$&&",		2 },
 	{ L"JP (HL)",			1 },
 	{ L"LD ($####),A",		3 },
 	{ L"XX",				1 },
@@ -680,9 +681,9 @@ void disassemble(struct GB* gb, wchar_t instrBuf[25], uint16_t addr)
 		opcode = RB(gb, ++addr & 0xFFFF, 0);
 		wcscpy(instrBuf, lookup_CB[opcode].str);
 	}
-	else
+	else // NOTE: swprintf includes a null terminator
 	{
-		// swprintf includes a null terminator
+		// If instruction contains 16 bit immediate
 		wcscpy(instrBuf, lookup[opcode].str);
 		wchar_t* imm = wcsstr(instrBuf, L"####");
 		if (imm != NULL) {
@@ -692,6 +693,7 @@ void disassemble(struct GB* gb, wchar_t instrBuf[25], uint16_t addr)
 			wmemcpy(imm, temp, 4);
 			return;
 		}
+		// If instruction contains 8 bit immediate
 		imm = wcsstr(instrBuf, L"##");
 		if (imm != NULL) {
 			wchar_t temp[3];
@@ -699,6 +701,8 @@ void disassemble(struct GB* gb, wchar_t instrBuf[25], uint16_t addr)
 			wmemcpy(imm, temp, 2);
 			return;
 		}
+		// If instruction contains an 8 bit immediate which is treated
+		//		as a signed offset to be added to the PC register
 		imm = wcsstr(instrBuf, L"&&&&");
 		if (imm != NULL) {
 			wchar_t temp[5];
@@ -708,6 +712,16 @@ void disassemble(struct GB* gb, wchar_t instrBuf[25], uint16_t addr)
 			uint16_t u16 = ++addr + offset;
 			swprintf(temp, 5, L"%04X", u16);
 			wmemcpy(imm, temp, 4);
+			return;
+		}
+		// If instruction contains an 8 bit immediate which is treated
+		//		as a signed offset not to be added to the PC (- opcode E8);
+		imm = wcsstr(instrBuf, L"&&");
+		if (imm != NULL) {
+			wchar_t temp[3];
+			int8_t offset = RB(gb, ++addr, 0);
+			swprintf(temp, 3, L"%02X", offset);
+			wmemcpy(imm, temp, 2);
 			return;
 		}
 	}
