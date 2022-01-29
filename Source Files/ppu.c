@@ -271,7 +271,8 @@ void ppu_step(struct GB* gb, int cycles)
 		// Enter next mode based on scanline value
 		if (gb->memory[index_LY] == 153) 
 		{
-			// Last scanline resets LY register
+			// Last scanline resets LY register (my emulator probably does this earlier than on 
+			//		original hardware, subject to change)
 			gb->memory[index_LY] = 0x00;
 			// Need to rescan OAM since it isn't going through the entry state
 			search_OAM(gb, visibilities, 0x00);
@@ -450,30 +451,30 @@ void draw_scanline(struct GB* gb, uint8_t* bitmapPtr)
 void draw_to_screen(struct GB* gb, HWND window, HDC hdc)
 {
 	gb->ppu.frameIncomplete = 1;
-	// static LARGE_INTEGER start = { 0,0 };
+	static LARGE_INTEGER start = { 0,0 };
 
 	// Push bitmap
 	gb->ppu.bitmap_PTR = (uint8_t*)gb->ppu.bitmap;
 	StretchDIBits(hdc, 0, 0, v_WIDTH, v_HEIGHT, 0, 0, v_HRES, v_VRES, gb->ppu.bitmap, &gb->ppu.bitmapBMI->bmi, DIB_RGB_COLORS, SRCCOPY);
 	
 	// Handle sync to video
-	// LARGE_INTEGER end, frequency;
-	// QueryPerformanceFrequency(&frequency);
-	// QueryPerformanceCounter(&end);
-	// float secsPerFrame = ((float)(end.QuadPart - start.QuadPart) / (float)frequency.QuadPart); 
-	// while (secsPerFrame < 0.01666667f) {
-	// 	QueryPerformanceCounter(&end);
-	// 	secsPerFrame = ((float)(end.QuadPart - start.QuadPart) / (float)frequency.QuadPart);
-	// }
-	// MSG msg;
-	// while (PeekMessage(&msg, window, 0, 0, PM_REMOVE)) {
-	// 	TranslateMessage(&msg);
-	// 	DispatchMessage(&msg);
-	// }
+	LARGE_INTEGER end, frequency;
+	QueryPerformanceFrequency(&frequency);
+	QueryPerformanceCounter(&end);
+	float secsPerFrame = ((float)(end.QuadPart - start.QuadPart) / (float)frequency.QuadPart); 
+	while (secsPerFrame < 0.01666667f) {
+		QueryPerformanceCounter(&end);
+		secsPerFrame = ((float)(end.QuadPart - start.QuadPart) / (float)frequency.QuadPart);
+	}
+	MSG msg;
+	while (PeekMessage(&msg, window, 0, 0, PM_REMOVE)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
 
 	// Reset starting timer and internal counter for WL
 	gb->ppu.win_LY = 0x00;
-	// QueryPerformanceCounter(&start);
+	QueryPerformanceCounter(&start);
 }
 
 // PPU Lookahead Reads

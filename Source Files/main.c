@@ -1,9 +1,6 @@
 #include <Windows.h>
 #include "mem.h"
 
-// TEMPORARY
-#include "apu.h"
-
 #ifndef NDEBUG
 #include "debug.h"
 #endif
@@ -82,8 +79,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE pInstance, PWSTR cmdLine, int c
 				emulator.sync_sel = 0;
 				break;
 			}
-			// I don't think precise timing with the APU is as important, still thinking
-			apu_step(&emulator, window, total);
 
 			// Break if bp reached, update cycle counter
 			#ifndef NDEBUG
