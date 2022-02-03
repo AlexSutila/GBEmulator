@@ -273,11 +273,11 @@ void ppu_step(struct GB* gb, int cycles)
 		{
 			// Last scanline resets LY register (my emulator probably does this earlier than on 
 			//		original hardware, subject to change)
-			gb->memory[index_LY] = 0x00;
+			// gb->memory[index_LY] = 0x00;
 			// Need to rescan OAM since it isn't going through the entry state
 			search_OAM(gb, visibilities, 0x00);
 			// Will need to handle scanline 153 weirdness
-			gb->ppu.nextMode = STATE_SCAN_LN153_I;
+			gb->ppu.nextMode = STATE_SCAN_LN153_E;
 		}
 		else gb->ppu.nextMode = STATE_VBLANK_I;
 		// Test equivalence between LYC and zero and update stat register
@@ -295,12 +295,18 @@ void ppu_step(struct GB* gb, int cycles)
 		if (prev_scanline > gb->ppu.scanline) gb->ppu.nextMode = STATE_VBLANK_E;
 		break;
 	case STATE_SCAN_LN153_E: // Pre LY reset
-		// Increment scanline counter
-		gb->ppu.scanline += cycles;
-		// Enter next state
-		gb->ppu.nextMode = STATE_SCAN_LN153_I;
-		break;
-	case STATE_SCAN_LN153_I:
+		// LY resets 4 cycles into the last scanline because of a weird hardware quirk
+		if (gb->ppu.scanline >= 4) {
+			gb->memory[index_LY] = 0x00;
+			// Update equivalence bit
+			equivalence = gb->memory[index_LYC] == 0x00;
+			gb->memory[index_STAT] &= ~0x04;
+			gb->memory[index_STAT] |= equivalence << 2;
+			// Fire interrupt if needed
+			if ((gb->memory[index_STAT] & 0x40) && equivalence) gb->memory[0xFF0F] |= INTMASK_STAT;
+			// No longer need to check this, move to next state
+			gb->ppu.nextMode = STATE_SCAN_LN153_I;
+		}
 		// Increments scanline counter
 		prev_scanline = gb->ppu.scanline;
 		gb->ppu.scanline = (gb->ppu.scanline + cycles) % 456;
@@ -308,6 +314,16 @@ void ppu_step(struct GB* gb, int cycles)
 		if (prev_scanline > gb->ppu.scanline)
 		{
 			// Push frame buffer to the screen
+			gb->ppu.frameIncomplete = 0;
+			gb->ppu.nextMode = STATE_OAMSEARCH_I;
+		} break;
+	case STATE_SCAN_LN153_I:
+		// Increments scanline counter
+		prev_scanline = gb->ppu.scanline;
+		gb->ppu.scanline = (gb->ppu.scanline + cycles) % 456;
+		// Detect overflow and enter next mode accordingly
+		if (prev_scanline > gb->ppu.scanline)
+		{	// Push frame buffer to the screen
 			gb->ppu.frameIncomplete = 0;
 			gb->ppu.nextMode = STATE_OAMSEARCH_I;
 		} break;
