@@ -603,9 +603,10 @@ void debug_init(HANDLE* hConsole, struct breakpoint* breakpoints)
 void debug_deinit()
 {
 	FreeConsole();
-
 	struct callStack* temp = callstack;
-	while (temp != NULL)
+
+	if (temp == NULL) return;
+	while (temp->next != NULL)
 	{
 		temp = temp->prev;
 		free(temp->next);
