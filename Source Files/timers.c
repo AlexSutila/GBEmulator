@@ -101,8 +101,13 @@ void DIV_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 	//
 	// ... This behavior is taken into account in this function
 
-	timers_step(gb, cycles);
+	// NOTE: Changes to this function massively effect trip world
+	//			In its current state, it will pause at a black screen
+	//			after scrolling the nintendo logo and execute garbage
+	//			(see farther down)
 
+	timers_step(gb, cycles);
+	
 	uint8_t MOD = gb->memory[0xFF06];
 	uint8_t TAC = gb->memory[0xFF07];
 	
@@ -127,11 +132,19 @@ void DIV_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 			gb->memory[0xFF05] += MOD;
 		}
 	}
-
+	
 	// Internal counter reset
 	gb->timer.counter.value = 0x0000;
 	gb->memory[0xFF04] = 0x00;
 	gb->sync_sel = 2;
+
+	// With this it boots then hangs in copyright screens 
+	/*
+	timers_step(gb, cycles);
+	gb->timer.counter.value = 0x0000;
+
+	gb->sync_sel = 2;
+	*/
 }
 
 // Timer counter
