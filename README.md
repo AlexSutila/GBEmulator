@@ -31,7 +31,13 @@ The only cartridge types I emulate as of right now are cartridges without memory
 cartridges with MBC1 chips, and cartridges with MBC3 chips without real time clocks. I will still
 likely add more when I get around to it.
 
+Known problem causers:
+   Street fighter 2, playable but major flickers
+   Trip world, doesn't boot at all
+   Dragon ball Z, just weird ???????????
+   Mario & Yoshi, boots and controllable, just can't start game
+
 There is still a lot that is incomplete and everything is still subject to change. I personally
 dont feel like I will ever call this project 'finished', as there is always something that
 can be tweaked to make the emulation more accurate. I'm not entirely sure how far I will go
-with it.
+with it. 
