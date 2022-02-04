@@ -46,7 +46,7 @@ void update_JOYP(struct GB* gb)
 	*  occured somewhere within the first 4 bits of this register in 
 	*  order to set the joypad IF bit if necessary */
 	uint8_t old = gb->memory[0xFF00];
-	uint8_t temp = 0xCF;
+	uint8_t temp = 0xFF;
 
 	switch (gb->joyp.mode)
 	{
