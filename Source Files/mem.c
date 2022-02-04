@@ -509,3 +509,10 @@ void gb_free(struct GB* gb)
 	free_cart(&gb->cart);
 	free_ppu(&gb->ppu);
 }
+
+// This only exists because the upper 3 bits of the 
+//		IF register should always read as 1
+uint8_t IF_RB(struct GB* gb, uint8_t cycles)
+{
+	return gb->memory[0xFF0F] | 0xE0;
+}

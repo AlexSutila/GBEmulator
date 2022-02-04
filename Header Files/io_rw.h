@@ -9,6 +9,7 @@ typedef signed short int16_t;
 // Reads
 uint8_t DIV_RB(struct GB* gb, uint8_t cycles);					// $FF04
 uint8_t TIMA_RB(struct GB* gb, uint8_t cycles);					// $FF05
+uint8_t IF_RB(struct GB* gb, uint8_t cycles);					// $FF0F
 uint8_t STAT_RB(struct GB* gb, uint8_t cycles);					// $FF41
 uint8_t LY_RB(struct GB* gb, uint8_t cycles);					// $FF44
 
