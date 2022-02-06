@@ -6,7 +6,7 @@
 //		representative bit if so and zero otherwise
 void search_OAM(struct GB* gb, uint8_t* visibilities, uint8_t curr_LY) 
 {
-	struct sprite* sprites = gb->memory + 0xFE00;
+	struct sprite* sprites = (struct sprite*)(gb->memory + 0xFE00);
 	for (int i = 0; i <= 40; i++) {
 
 		int yPos = sprites[i].yPos - 16;
@@ -24,7 +24,7 @@ void search_OAM(struct GB* gb, uint8_t* visibilities, uint8_t curr_LY)
 void draw_Sprite(struct GB* gb, uint8_t* bitmapPtr, uint8_t* visibilities, uint8_t index) {
 
 	// Used to index sprites in OAM using the index parameter
-	struct sprite* sprites = gb->memory + 0xFE00;
+	struct sprite* sprites = (struct sprite*)(gb->memory + 0xFE00);
 
 	uint8_t curr_LY = gb->memory[index_LY];
 	uint8_t height = (gb->memory[index_LCDC] & LCDC_OBJS_MASK) ? 16 : 8;
@@ -36,8 +36,8 @@ void draw_Sprite(struct GB* gb, uint8_t* bitmapPtr, uint8_t* visibilities, uint8
 		gb->memory[index_OBP1] : gb->memory[index_OBP0];
 
 	// Fetch first tile of sprite
-	struct tileStruct* currentTile = (height == 16) ? &gb->memory[0x8000 + (((uint16_t)sprites[index].tileIndex & 0xFFFE) << 4)]
-		: &gb->memory[0x8000 + (((uint16_t)sprites[index].tileIndex) << 4)];
+	struct tileStruct* currentTile = (height == 16) ? (struct tileStruct*)&gb->memory[0x8000 + (((uint16_t)sprites[index].tileIndex & 0xFFFE) << 4)]
+		: (struct tileStruct*)&gb->memory[0x8000 + (((uint16_t)sprites[index].tileIndex) << 4)];
 
 	// Calculate row offset based on yFlip bit
 	// uint8_t rowOffset = curr_LY - yPos;
