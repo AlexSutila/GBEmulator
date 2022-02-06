@@ -212,7 +212,7 @@ uint8_t RB(struct GB* gb, uint16_t addr, uint8_t cycles)
 	}
 	// Mapped IO
 	else if (addr >= 0xFF00 && addr <= 0xFF7F) {
-		uint8_t(*readFunc)(struct GB*, uint8_t) = IO_reads[addr - 0xFF00];
+		uint8_t const (*readFunc)(struct GB*, uint8_t) = IO_reads[addr - 0xFF00];
 		if (readFunc != NULL) return (*readFunc)(gb, cycles);
 		else return gb->memory[addr];
 	}
@@ -371,7 +371,7 @@ void WB(struct GB* gb, uint16_t addr, uint8_t val, uint8_t cycles)
 	}
 	// Mapped IO
 	else if (addr >= 0xFF00 && addr <= 0xFF7F) {
-		void (*writeFunc)(struct GB*, uint8_t, uint8_t) = IO_writes[addr - 0xFF00];
+		void const (*writeFunc)(struct GB*, uint8_t, uint8_t) = IO_writes[addr - 0xFF00];
 		if (writeFunc != NULL) (*writeFunc)(gb, val, cycles);
 		else gb->memory[addr] = val;
 	}

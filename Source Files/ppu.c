@@ -271,9 +271,6 @@ void ppu_step(struct GB* gb, int cycles)
 		// Enter next mode based on scanline value
 		if (gb->memory[index_LY] == 153) 
 		{
-			// Last scanline resets LY register (my emulator probably does this earlier than on 
-			//		original hardware, subject to change)
-			// gb->memory[index_LY] = 0x00;
 			// Need to rescan OAM since it isn't going through the entry state
 			search_OAM(gb, visibilities, 0x00);
 			// Will need to handle scanline 153 weirdness
@@ -343,7 +340,7 @@ void ppu_step(struct GB* gb, int cycles)
 struct tileStruct* unsigned_tile_addressing(struct GB* gb, uint16_t map_base, uint8_t LY, int tileColumn) 
 { // LCDC bit 4 = 1
 	uint8_t index = gb->memory[map_base + tileColumn + (((uint16_t)LY / 8) * 32)];
-	return &gb->memory[0x8000 + (uint16_t)index * 16];
+	return (struct tileStruct*)&gb->memory[0x8000 + (uint16_t)index * 16];
 }
 struct tileStruct* signed_tile_addressing(struct GB* gb, uint16_t map_base, uint8_t LY, int tileColumn) 
 { // LCDC bit 4 = 0
@@ -351,7 +348,7 @@ struct tileStruct* signed_tile_addressing(struct GB* gb, uint16_t map_base, uint
 	// Byte must be converted to signed 16 bit value
 	int8_t temp = (int8_t)index;
 	int16_t signed_index = (int16_t)temp;
-	return &gb->memory[0x9000 + (signed_index * 16)];
+	return (struct tileStruct*)&gb->memory[0x9000 + (signed_index * 16)];
 }
 
 // Draws an entire scanline - not accurate to original hardware, but both this emulator and

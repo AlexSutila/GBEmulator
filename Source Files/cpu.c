@@ -627,56 +627,47 @@ int int_request(struct GB* gb, int cycles)
 				to this. No such IME_scheduler is described in any documentation
 	*/
 
-	uint8_t IF = gb->memory[0xFF0F];
+	// Lookup tables for interrupt vectors and bit masks to mask the necessary IF 
+	//		bits as an interrupt is serviced
+	static const uint16_t bitmasks[5] = { ~INTMASK_VBLANK, ~INTMASK_STAT, ~INTMASK_TIMER, ~INTMASK_SERIAL, ~INTMASK_JOYPAD };
+	static const uint16_t intVectors[5] = { 0x0040, 0x0048, 0x0050, 0x0058, 0x0060 };
+
+	// Update scheduler, setting IME if needed
+	uint8_t IF = gb->memory[0xFF0F], IE = gb->memory[0xFFFF];
 	gb->cpu.IME_scheduler >>= (cycles >> 2);
 	if (gb->cpu.IME_scheduler & 0x3FFF) gb->cpu.IME = 1;
 
-	// Lower bit interrupts are highest priority
-	int mask = 0x01;
-	for (int i = 0; i < 5; i++) {
+	// If the CPU is in halt mode, 4 extra cycles are used on top of the typical 20
+	//		it uses to service a requested interrupt
+	int serviceCycles = gb->cpu.halt ? 24 : 20;
 
-		if (IF & gb->memory[0xFFFF] & mask) {
-			
+	// Lower bit interrupts are highest priority
+	for (int i = 0; i < 5; i++) {
+		if (IF & IE & (1 << i)) {
+
+			// Required in this specific order to bring the CPU out of 
+			//		halt mode if IME is zero prior to entering halt mode
 			gb->cpu.halt = 0;
 			if (!gb->cpu.IME) break;
 
+			// Update CPU state
 			gb->cpu.IME_scheduler = 0;
 			gb->cpu.IME = 0;
 
+			// Push return value to stack
 			WB(gb, --gb->cpu.SP, (gb->cpu.PC >> 8), 0);
 			WB(gb, --gb->cpu.SP, (gb->cpu.PC & 0x00FF), 0);
-			
-			switch (i) 
-			{
-				case INTBIT_VBLANK: 
-					gb->memory[0xFF0F] &= ~INTMASK_VBLANK;
-					gb->cpu.PC = 0x40;
-					break;
-				case INTBIT_STAT:
-					gb->memory[0xFF0F] &= ~INTMASK_STAT;
-					gb->cpu.PC = 0x48;
-					break;
-				case INTBIT_TIMER:
-					gb->memory[0xFF0F] &= ~INTMASK_TIMER;
-					gb->cpu.PC = 0x50;
-					break;
-				case INTBIT_SERIAL:
-					gb->memory[0xFF0F] &= ~INTMASK_SERIAL;
-					gb->cpu.PC = 0x58;
-					break;
-				case INTBIT_JOYPAD:
-					gb->memory[0xFF0F] &= ~INTMASK_JOYPAD;
-					gb->cpu.PC = 0x60;
-					break;
-			}
-			
-			return 20; // Uncertain about this timing
+
+			// Clear flag bits and update PC
+			gb->memory[0xFF0F] &= bitmasks[i];
+			gb->cpu.PC = intVectors[i];
+
+			// Return cycles used to service interrupt
+			return serviceCycles;
 		}
-		
-		mask <<= 1;
 	}
 
-	// No interrupts requested
+	// No interrupts requested, no sync cycles needed 
 	return 0;
 }
 
