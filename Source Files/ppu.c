@@ -151,7 +151,7 @@ void free_ppu(struct PPU* ppu)
 // PPU step function
 void ppu_step(struct GB* gb, int cycles) 
 {
-	static struct sprite selectedSprites[10];
+	static struct sprite* selectedSprites[10];
 	gb->ppu.mode = gb->ppu.nextMode;
 	int prev_scanline, spriteCount;
 	uint8_t equivalence;
@@ -218,8 +218,9 @@ void ppu_step(struct GB* gb, int cycles)
 		// Draws entire scanline for BG and win (not accurate to original timings)
 		draw_scanline(gb, gb->ppu.bitmap_PTR);
 		// Places sprites on the same scanline
-		for (int i = 0; i < spriteCount; i++) 
-			draw_Sprite(gb, gb->ppu.bitmap_PTR, &selectedSprites[i]);
+		if (gb->memory[index_LCDC] & LCDC_OBJEN_MASK)
+			for (int i = 0; i < spriteCount; i++) 
+				draw_Sprite(gb, gb->ppu.bitmap_PTR, selectedSprites[i]);
 		// Increment scanline counter and move bitmap pointer to the next scanline
 		gb->ppu.scanline += cycles;
 		gb->ppu.bitmap_PTR += 160;

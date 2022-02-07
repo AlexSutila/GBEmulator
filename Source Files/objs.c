@@ -5,7 +5,7 @@
 // For each sprite, determines if it is on the current scanline and writes a 1 to the sprites 
 //		representative bit if so and zero otherwise. Returns the number of sprites selected on
 //		the given scanline, curr_LY. This number will not exceed 10 due to hardware limitations
-int search_OAM(struct GB* gb, struct sprite* selectedSprites, uint8_t curr_LY) 
+int search_OAM(struct GB* gb, struct sprite** selectedSprites, uint8_t curr_LY) 
 {
 	struct sprite* sprites = (struct sprite*)(gb->memory + 0xFE00);
 	uint8_t height = (gb->memory[index_LCDC] & LCDC_OBJS_MASK) ? 16 : 8;
@@ -16,12 +16,25 @@ int search_OAM(struct GB* gb, struct sprite* selectedSprites, uint8_t curr_LY)
 		int yPos = sprites[i].yPos - 16;
 		if ((yPos + height > curr_LY) && (yPos <= curr_LY))
 		{	// If sprite is on the current scanline, select it
-			selectedSprites[count] = sprites[i];
+			selectedSprites[count] = &sprites[i];
 			count++;
 		}
 	}
 
 	// TODO: Sort sprites based on render order to implement drawing priority
+	int i = 1;
+	while (i < count)
+	{
+		int j = i;
+		while (j > 0 && selectedSprites[j-1]->xPos <= selectedSprites[j]->xPos)
+		{
+			struct sprite* temp = selectedSprites[j];
+			selectedSprites[j] = selectedSprites[j - 1];
+			selectedSprites[j - 1] = temp;
+			j--;
+		}
+		i++;
+	}
 
 	return count;
 }

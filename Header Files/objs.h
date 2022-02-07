@@ -21,6 +21,6 @@ struct sprite
 };
 
 void draw_Sprite(struct GB* gb, uint8_t* bitmapPtr, struct sprite* curSprite);
-int search_OAM(struct GB* gb, struct sprite* selectedSprites, uint8_t curr_LY);
+int search_OAM(struct GB* gb, struct sprite** selectedSprites, uint8_t curr_LY);
 
 #endif // _OBJS_H_
