@@ -151,9 +151,10 @@ void free_ppu(struct PPU* ppu)
 // PPU step function
 void ppu_step(struct GB* gb, int cycles) 
 {
-	static uint8_t visibilities[40];
-	int prev_scanline; uint8_t equivalence;
+	static struct sprite selectedSprites[10];
 	gb->ppu.mode = gb->ppu.nextMode;
+	int prev_scanline, spriteCount;
+	uint8_t equivalence;
 
 	switch (gb->ppu.mode) 
 	{
@@ -213,19 +214,12 @@ void ppu_step(struct GB* gb, int cycles)
 		} break;
 	case STATE_DATATRANS_E:
 		// Search OAM for visible sprites
-		search_OAM(gb, visibilities, gb->memory[index_LY]);
+		spriteCount = search_OAM(gb, selectedSprites, gb->memory[index_LY]);
 		// Draws entire scanline for BG and win (not accurate to original timings)
 		draw_scanline(gb, gb->ppu.bitmap_PTR);
 		// Places sprites on the same scanline
-		uint8_t spriteCount = 0;
-		if (gb->memory[index_LCDC] & LCDC_OBJEN_MASK) {
-			for (int i = 0; i < 40 && spriteCount < 10; i++) {
-				if (visibilities[i]) {
-					draw_Sprite(gb, gb->ppu.bitmap_PTR, visibilities, i);
-					spriteCount++;
-				}
-			}
-		}
+		for (int i = 0; i < spriteCount; i++) 
+			draw_Sprite(gb, gb->ppu.bitmap_PTR, &selectedSprites[i]);
 		// Increment scanline counter and move bitmap pointer to the next scanline
 		gb->ppu.scanline += cycles;
 		gb->ppu.bitmap_PTR += 160;
@@ -271,8 +265,6 @@ void ppu_step(struct GB* gb, int cycles)
 		// Enter next mode based on scanline value
 		if (gb->memory[index_LY] == 153) 
 		{
-			// Need to rescan OAM since it isn't going through the entry state
-			search_OAM(gb, visibilities, 0x00);
 			// Will need to handle scanline 153 weirdness
 			gb->ppu.nextMode = STATE_SCAN_LN153_E;
 		}
