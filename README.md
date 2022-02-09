@@ -3,9 +3,15 @@
 My third honest and most successful attempt at creating a gameboy emulator.
 Written entirely in C using win32 for graphical related things.
 
-Passes all blargs cpu instruction tests, as well as memory access timing tests, still some
-problems in DMG acid2, right mole is still visible for some reason, but I personally don't
-find it to be that big a deal. 
+Passes all blargs cpu instruction and memory access timing tests, as well as
+dmg acid 2 to prove basic graphical accuracy. There are still some inaccuracies
+with the ppu timings that I plan to work out soon, but I will likely stick to
+a scanline rendering method. I have yet to start audio support. 
+
+![passing tests](https://user-images.githubusercontent.com/96510931/152865596-5f94be09-f963-4f6f-bc8c-cf6852a817db.png)
+
+I've tested quite a few games, including but not limited to the games shown in the screenshot
+below. All of these games run fine, but there exists a handfull that still don't. 
 
 ![Screenshots](https://user-images.githubusercontent.com/96510931/147891212-fab95f69-677e-454a-ad16-411728402da1.png)
 
@@ -23,7 +29,7 @@ as I'm not entirely sure how it will affect performance when its finished.
 ![image](https://user-images.githubusercontent.com/96510931/148862785-39406d93-3f0e-483a-8719-a5cecfedb526.png)
 
 As of now, it can place break points, step through instructions one or a hundred at a time, and
-disassembly machine code correctly for the most part. Backwards disassembly is tricky, so it does
+disassemble machine code correctly for the most part. Backwards disassembly is tricky, so it does
 not always get that right, but I'm fairly confident everything including and after the current
 instruction it is executing will be disassembled as intended. 
 
