@@ -161,18 +161,10 @@ void ppu_step(struct GB* gb, int cycles)
 	case STATE_DISABLED_E:
 		// Reset LY
 		gb->memory[index_LY] = 0x00;
-		// Reset STAT bits 0-2
-		gb->memory[index_STAT] &= ~0x7;
-		equivalence = (gb->memory[index_LYC] == 0x00);
-		gb->memory[index_STAT] |= equivalence << 2;
 		// Enter next mode
 		gb->ppu.nextMode = STATE_DISABLED_I;
 		break;
 	case STATE_DISABLED_I:
-		// LYC may be written to, check equivalence again and update stat accordingly
-		gb->memory[index_STAT] &= ~0x4;
-		equivalence = (gb->memory[index_LYC] == 0x00);
-		gb->memory[index_STAT] |= equivalence << 2;
 		break;
 	case STATE_MISLATCH_E:
 		// Set scanline counter, as this is sort of initialization
@@ -550,6 +542,14 @@ void LYC_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 {
 	ppu_step(gb, cycles);
 	gb->memory[index_LYC] = val;
+
+	// Test equivalence between LY and LYC and update stat register
+	uint8_t equivalence = gb->memory[index_LY] == gb->memory[index_LYC];
+	gb->memory[index_STAT] &= ~0x04;
+	gb->memory[index_STAT] |= equivalence << 2;
+	// Request stat interrupt if required
+	if ((gb->memory[index_STAT] & 0x40) && equivalence) gb->memory[0xFF0F] |= INTMASK_STAT;
+
 	gb->sync_sel = 1;
 }
 void windowY_WB(struct GB* gb, uint8_t val, uint8_t cycles)
