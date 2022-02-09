@@ -139,12 +139,10 @@ void DIV_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 	gb->sync_sel = 2;
 
 	// With this it boots then hangs in copyright screens 
-	/*
-	timers_step(gb, cycles);
-	gb->timer.counter.value = 0x0000;
+	// timers_step(gb, cycles);
+	// gb->timer.counter.value = 0x0000;
 
 	gb->sync_sel = 2;
-	*/
 }
 
 // Timer counter
