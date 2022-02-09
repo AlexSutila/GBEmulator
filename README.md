@@ -38,7 +38,6 @@ cartridges with MBC1 chips, and cartridges with MBC3 chips without real time clo
 likely add more when I get around to it.
 
 Known problem causers:
-   Street fighter 2, playable but major flickers
    Trip world, doesn't boot at all
    Dragon ball Z, just weird ???????????
    Mario & Yoshi, boots and controllable, just can't start game
