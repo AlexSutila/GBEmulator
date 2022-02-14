@@ -83,9 +83,9 @@ uint8_t TIMA_RB(struct GB* gb, uint8_t cycles)
 	int increment = FALLING_EDGES(gb->timer.counter.value, temp.counter.value, freq_bit);
 	uint8_t new_tima = gb->memory[0xFF05] + increment;
 
-	if (OVERFLOW(gb->memory[0xFF05], new_tima)) {
+	if (OVERFLOW(gb->memory[0xFF05], new_tima)) 
 		return new_tima + MOD;
-	}
+	
 	else return new_tima;
 }
 
@@ -94,7 +94,8 @@ uint8_t TIMA_RB(struct GB* gb, uint8_t cycles)
 // Div counter
 void DIV_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 {
-	// A write to DIV has the potential to reset the internal counter.
+	// A write to DIV has will always reset the gameboy's internal counter.
+	//		In addition, doing this could also potentially increment TIMA.
 	//		Depending on the current frequency of the timer, the bit of
 	//		focus which drives the incrementing of the tima register may
 	//		be set high before this reset. This results in a falling edge
@@ -102,37 +103,32 @@ void DIV_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 	//
 	// ... This behavior is taken into account in this function
 
-	// NOTE: Changes to this function massively effect trip world
-	//			In its current state, it will pause at a black screen
-	//			after scrolling the nintendo logo and execute garbage
-	//			(see farther down)
-
 	timers_step(gb, cycles);
 	
-	// uint8_t MOD = gb->memory[0xFF06];
-	// uint8_t TAC = gb->memory[0xFF07];
-	// 
-	// // Check for falling edge on frequency bit if the timer is enabled
-	// if (TAC & 0x04)
-	// {
-	// 	uint8_t old_tima = gb->memory[0xFF05], freq_bit = 0x00;
-	// 
-	// 	switch (TAC & 0x3) {
-	// 	case 0b00: freq_bit = freqMux_bit0; break;
-	// 	case 0b01: freq_bit = freqMux_bit1; break;
-	// 	case 0b10: freq_bit = freqMux_bit2; break;
-	// 	case 0b11: freq_bit = freqMux_bit3; break;
-	// 	}
-	// 
-	// 	// Detect falling edge at bit masked by freq_mask
-	// 	int increment = FALLING_EDGES(gb->timer.counter.value, 0x0000, freq_bit);
-	// 	gb->memory[0xFF05] += increment;
-	// 
-	// 	if (OVERFLOW(old_tima, gb->memory[0xFF05])) {
-	// 		gb->memory[0xFF0F] |= 0x04; 
-	// 		gb->memory[0xFF05] += MOD;
-	// 	}
-	// }
+	uint8_t MOD = gb->memory[0xFF06];
+	uint8_t TAC = gb->memory[0xFF07];
+	
+	// Check for falling edge on frequency bit if the timer is enabled
+	if (TAC & 0x04)
+	{
+		uint8_t old_tima = gb->memory[0xFF05], freq_bit = 0x00;
+	
+		switch (TAC & 0x3) {
+		case 0b00: freq_bit = freqMux_bit0; break;
+		case 0b01: freq_bit = freqMux_bit1; break;
+		case 0b10: freq_bit = freqMux_bit2; break;
+		case 0b11: freq_bit = freqMux_bit3; break;
+		}
+	
+		// Detect falling edge at bit masked by freq_mask
+		if (gb->timer.counter.value & (1 << freq_bit))
+			gb->memory[0xFF05]++;
+	
+		if (OVERFLOW(old_tima, gb->memory[0xFF05])) {
+			gb->memory[0xFF0F] |= 0x04; 
+			gb->memory[0xFF05] += MOD;
+		}
+	}
 	
 	// Internal counter reset
 	gb->timer.counter.value = 0x0000;
