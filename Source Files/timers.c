@@ -3,8 +3,9 @@
 
 // falling_edge - num of falling edges at a certain 
 //		bit as 'old' is incremented to 'cur'
-#define FALLING_EDGES(old, cur, bit)        ((cur >> (bit + 1)) - (old >> (bit + 1)));
-#define OVERFLOW(old, cur)                  (old > cur)
+#define FALLING_EDGES(old, cur, bit) (cur > old) ? ((cur >> (bit + 1)) - (old >> (bit + 1))) \
+            : ((0x8000 >> bit) + (cur >> (bit + 1)) - (old >> (bit + 1)))
+#define OVERFLOW(old, cur) (old > cur)
 
 // counter value bits for tima frequency
 enum frequency_Bits { freqMux_bit0 = 9, freqMux_bit1 = 3, freqMux_bit2 = 5, freqMux_bit3 = 7 };
@@ -14,8 +15,8 @@ void init_timers(struct timers* timer) {
 	timer->counter.value = 0x0000;
 }
 
-void timers_step(struct GB* gb, int cycles) {
-	
+void timers_step(struct GB* gb, int cycles) 
+{	
 	uint16_t old_counter = gb->timer.counter.value;
 	gb->timer.counter.value += cycles;
 	gb->memory[0xFF04] = (gb->timer.counter.value >> 8);
@@ -108,40 +109,34 @@ void DIV_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 
 	timers_step(gb, cycles);
 	
-	uint8_t MOD = gb->memory[0xFF06];
-	uint8_t TAC = gb->memory[0xFF07];
-	
-	// Check for falling edge on frequency bit if the timer is enabled
-	if (TAC & 0x04)
-	{
-		uint8_t old_tima = gb->memory[0xFF05], freq_bit = 0x00;
-	
-		switch (TAC & 0x3) {
-		case 0b00: freq_bit = freqMux_bit0; break;
-		case 0b01: freq_bit = freqMux_bit1; break;
-		case 0b10: freq_bit = freqMux_bit2; break;
-		case 0b11: freq_bit = freqMux_bit3; break;
-		}
-	
-		// Detect falling edge at bit masked by freq_mask
-		int increment = FALLING_EDGES(gb->timer.counter.value, 0x0000, freq_bit);
-		gb->memory[0xFF05] += increment;
-	
-		if (OVERFLOW(old_tima, gb->memory[0xFF05])) {
-			gb->memory[0xFF0F] |= 0x04; 
-			gb->memory[0xFF05] += MOD;
-		}
-	}
+	// uint8_t MOD = gb->memory[0xFF06];
+	// uint8_t TAC = gb->memory[0xFF07];
+	// 
+	// // Check for falling edge on frequency bit if the timer is enabled
+	// if (TAC & 0x04)
+	// {
+	// 	uint8_t old_tima = gb->memory[0xFF05], freq_bit = 0x00;
+	// 
+	// 	switch (TAC & 0x3) {
+	// 	case 0b00: freq_bit = freqMux_bit0; break;
+	// 	case 0b01: freq_bit = freqMux_bit1; break;
+	// 	case 0b10: freq_bit = freqMux_bit2; break;
+	// 	case 0b11: freq_bit = freqMux_bit3; break;
+	// 	}
+	// 
+	// 	// Detect falling edge at bit masked by freq_mask
+	// 	int increment = FALLING_EDGES(gb->timer.counter.value, 0x0000, freq_bit);
+	// 	gb->memory[0xFF05] += increment;
+	// 
+	// 	if (OVERFLOW(old_tima, gb->memory[0xFF05])) {
+	// 		gb->memory[0xFF0F] |= 0x04; 
+	// 		gb->memory[0xFF05] += MOD;
+	// 	}
+	// }
 	
 	// Internal counter reset
 	gb->timer.counter.value = 0x0000;
 	gb->memory[0xFF04] = 0x00;
-	gb->sync_sel = 2;
-
-	// With this it boots then hangs in copyright screens 
-	// timers_step(gb, cycles);
-	// gb->timer.counter.value = 0x0000;
-
 	gb->sync_sel = 2;
 }
 
