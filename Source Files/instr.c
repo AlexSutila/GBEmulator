@@ -803,7 +803,25 @@ struct instrTimingInfo halt(struct GB* gb) {
 }
 
 struct instrTimingInfo stop(struct GB* gb) {
-	// TODO
+	if (gb->memory[0xFF00] & 0x0F)
+	{
+		// No interrupt pending
+		if (!(gb->memory[0xFFFF] & gb->memory[0xFF0F]))
+		{
+			// Stop acts as a 2 byte opcode, and halt mode is 
+			//		... entered
+			gb->cpu.PC++;
+			gb->cpu.halt = 1;
+		}
+	}
+	else // TODO - Stop mode should be entered under these conditions 
+	{
+		// If interrupt pending act as 2 byte opcode
+		if (gb->memory[0xFFFF] & gb->memory[0xFF0F])
+			gb->cpu.PC++;
+		// Stop acts as a one byte opcode, DIV is reset
+		gb->timer.counter.value = 0x0000;
+	}
 	return (struct instrTimingInfo) { 4, 4 };
 }
 
