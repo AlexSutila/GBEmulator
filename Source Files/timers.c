@@ -159,9 +159,34 @@ void TAC_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 {
 	timers_step(gb, cycles);
 
-	// Only first 3 bits are used
+	uint8_t  MOD = gb->memory[0xFF06], old_tima = gb->memory[0xFF05];
+	uint16_t old_bit = 0, new_bit = 0; // Bit of focus for falling edge detector
+	
+	switch (gb->memory[0xFF07] & 0x3) {
+	case 0b00: old_bit = (gb->timer.counter.value & (1 << freqMux_bit0)) >> freqMux_bit0; break;
+	case 0b01: old_bit = (gb->timer.counter.value & (1 << freqMux_bit1)) >> freqMux_bit1; break;
+	case 0b10: old_bit = (gb->timer.counter.value & (1 << freqMux_bit2)) >> freqMux_bit2; break;
+	case 0b11: old_bit = (gb->timer.counter.value & (1 << freqMux_bit3)) >> freqMux_bit3; break;
+	}
+	
+	switch (val & 0x3) {
+	case 0b00: new_bit = (gb->timer.counter.value & (1 << freqMux_bit0)) >> freqMux_bit0; break;
+	case 0b01: new_bit = (gb->timer.counter.value & (1 << freqMux_bit1)) >> freqMux_bit1; break;
+	case 0b10: new_bit = (gb->timer.counter.value & (1 << freqMux_bit2)) >> freqMux_bit2; break;
+	case 0b11: new_bit = (gb->timer.counter.value & (1 << freqMux_bit3)) >> freqMux_bit3; break;
+	}
+	
+	if (FALLING_EDGES(old_bit, new_bit, 0))
+		gb->memory[0xFF05]++;
+	
+	if (OVERFLOW(old_tima, gb->memory[0xFF05])) {
+		gb->memory[0xFF0F] |= 0x04;
+		gb->memory[0xFF05] += MOD;
+	}
+
+	// Update TAC register - only first 3 bits are used
 	gb->memory[0xFF07] &= ~0x7;
 	gb->memory[0xFF07] |= (val & 0x7);
-	
+
 	gb->sync_sel = 2;
 }
