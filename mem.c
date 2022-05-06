@@ -62,7 +62,7 @@ void open_romFile(struct cartridge* cart_ptr) {
 uint8_t RB(struct GB* gb, uint16_t addr, uint8_t cycles)
 {
 	static const uint8_t(*IO_reads[128])(struct GB*, uint8_t) = {
-		/* 0xFF00 */ NULL,
+		/* 0xFF00 */ &JOYP_RB,
 		/* 0xFF01 */ NULL,
 		/* 0xFF02 */ NULL,
 		/* 0xFF03 */ NULL,

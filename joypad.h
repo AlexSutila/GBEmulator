@@ -14,29 +14,28 @@
 	Bit 0 - P10 Input: Right or A        (0=Pressed) (Read Only)
 */
 
-// KeyState indices
-enum keyStateIndices 
-{ 
-	keyState_up, 
-	keyState_down, 
-	keyState_left, 
-	keyState_right, 
-	keyState_A, 
-	keyState_B, 
-	keyState_start, 
-	keyState_select 
-};
-
 struct joypad 
 {
-	// 8 buttons, indexed by keyStateIndices
-	uint8_t keyStates[8];
+	// each entry in keyStates represents one button
+	//		...
+	// reg_joyp represents the memory mapped joyp register
+	uint8_t keyStates[8], reg_joyp;
+	// An interrupt is triggered when a falling edge of the 
+	//		output of an AND gate of bits 0 - 4 is detected
+	uint8_t fallingEdgeDetector;
+	// mode indicates which selects are currently selected 
+	//		(Action, Direction, None or Both)
 	int mode;
 };
 
-// Lmao, self explanitory
+// Just sets all keys to unpressed
 void init_JOYP(struct joypad* joyp);
+
+// Refreshes the contents of reg_joyp given the conents of
+//		keyStates and mode
 void update_JOYP(struct GB* gb);
+
+// Updates keyStates based on keys pressed
 void update_keyStates(struct GB* gb);
 
 #endif // _JOYPAD_H_
