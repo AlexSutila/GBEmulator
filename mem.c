@@ -1,7 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdlib.h>
 #include "mem.h"
-#include "io_rw.h"
+#include "hwio.h"
 
 // Full contents of the DMG bootrom, checks the cartridge header, scrolls
 //		nintendo logo and plays the funny blingy sound

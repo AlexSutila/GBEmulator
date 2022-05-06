@@ -144,7 +144,7 @@
     <ClInclude Include="cpu\cpu.h" />
     <ClInclude Include="cpu\instr.h" />
     <ClInclude Include="debug.h" />
-    <ClInclude Include="io_rw.h" />
+    <ClInclude Include="hwio.h" />
     <ClInclude Include="joypad.h" />
     <ClInclude Include="mem.h" />
     <ClInclude Include="ppu\objs.h" />

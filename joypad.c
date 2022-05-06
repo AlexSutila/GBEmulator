@@ -1,7 +1,7 @@
 #include "joypad.h"
 
 #include <Windows.h>
-#include "io_rw.h"
+#include "hwio.h"
 #include "mem.h"
 
 // Masks for active low selects

@@ -21,7 +21,7 @@
     <ClInclude Include="debug.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="io_rw.h">
+    <ClInclude Include="hwio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="joypad.h">

@@ -48,8 +48,23 @@ struct GB
 	struct PPU ppu;
 };
 
+// These read/write functions are to be used specifically by the CPU and by the
+//		CPU only. The cycles field serves as an indicator as to how many cycles
+//		ahead a sample should be read, or how many cycles a given component should
+//		be stepped before writing to the given address in the scenario where the
+//		cycle of which the memory address is read/written matters. 
+//		...
+// These look aheads or mid instruction component synchronizations are only done
+//		when working in the IO regs region of memory when the address is mapped
+//		to a particularly important IO register (see lookup tables within these
+//		functions, if null cycles won't be used)
 uint8_t RB(struct GB* gb, uint16_t addr, uint8_t cycles);
 void WB(struct GB* gb, uint16_t addr, uint8_t val, uint8_t cycles);
+
+// TODO:
+// Create functions here for the PPU to access VRAM and eventually after some
+//		rewriting, have the PPU call those instead of having it poke into the
+//		memory array directly. 
 
 void gb_init(struct GB* gb);
 void gb_free(struct GB* gb);
