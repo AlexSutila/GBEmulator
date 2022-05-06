@@ -48,6 +48,14 @@ struct GB
 	struct PPU ppu;
 };
 
+// Fairly self explanitory, sets the corresponding interrupt flag bit, to be 
+//		used by components other than the CPU.
+inline void setIFBit(struct GB* gb, uint8_t bitNum)
+{
+	// FFOF is the address of the IF register
+	gb->memory[0xFF0F] = 1 << bitNum;
+}
+
 // These read/write functions are to be used specifically by the CPU and by the
 //		CPU only. The cycles field serves as an indicator as to how many cycles
 //		ahead a sample should be read, or how many cycles a given component should
