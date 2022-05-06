@@ -33,7 +33,8 @@ void cpu_init(struct sharp_SM83* cpu_ptr)
 	cpu_ptr->PC = 0x0000;
 }
 
-// To address the extended CB opcode table
+// To address the extended CB opcode table, which is basically an entirely seperate
+//		opcode table that can be used by using a CB opcode
 struct instrTimingInfo goto_cb_prefix_table(struct GB* gb) 
 {
 	// Extended opcode and operand lookup tables
@@ -599,29 +600,23 @@ struct instrTimingInfo cpu_execute(struct GB* gb)
 	return (*instr_lookup[opcode])(gb);
 }
 
-// Handles interrupts
 int int_request(struct GB* gb, int cycles) 
 {
-	/*
-			Returns timing into to be added on top of the timing info returned from 
-				cpu instruction execution. Extra cycles are used as an interrupt is
-				serviced.
-			Effectively 2 NOPs occur, the PC is pushed to the stack (2 cycles since
-				2 one byte pushes), and PC register is set to the address of handler
-
-			Bit 0: VBlank   Interrupt Enable  (INT $40)
-			Bit 1: LCD STAT Interrupt Enable  (INT $48)
-			Bit 2: Timer    Interrupt Enable  (INT $50)
-			Bit 3: Serial   Interrupt Enable  (INT $58)
-			Bit 4: Joypad   Interrupt Enable  (INT $60)
-
+	/*		Effectively 2 NOPs occur, the PC is pushed to the stack (2 cycles since
+				2 one byte pushes), and PC register is set to the address of the
+				corresponding interrupt handler at one of the following vectors:
+					- IF Bit 0: VBlank   (INT $40)
+					- IF Bit 1: LCD STAT (INT $48)
+					- IF Bit 2: Timer    (INT $50)
+					- IF Bit 3: Serial   (INT $58)
+					- IF Bit 4: Joypad   (INT $60)
 			When interrupt is triggered, it's corresponding bit in IF register
-				is set high
+				is set high (this is what triggered this interrupt)
 			IF register only requests the interrupt be executed. Interrupt only
-				executes if its corresponding IE bit is also high.
+				triggers if its corresponding IE bit is also high.
 			No interrupts occur regardless of IE or IF bits if the Interrupt 
 				Master Enable is low, which can only be set through specific
-				instructions.
+				instructions EI and DI.
 			The earlier described instructions might take not actually enable the
 				IME until the next instruction, the 'IME_scheduler' is my solution
 				to this. No such IME_scheduler is described in any documentation
@@ -629,7 +624,7 @@ int int_request(struct GB* gb, int cycles)
 
 	// Lookup tables for interrupt vectors and bit masks to mask the necessary IF 
 	//		bits as an interrupt is serviced
-	static const uint16_t bitmasks[5] = { ~INTMASK_VBLANK, ~INTMASK_STAT, ~INTMASK_TIMER, ~INTMASK_SERIAL, ~INTMASK_JOYPAD };
+	static const uint16_t   bitmasks[5] = { ~INTMASK_VBLANK, ~INTMASK_STAT, ~INTMASK_TIMER, ~INTMASK_SERIAL, ~INTMASK_JOYPAD };
 	static const uint16_t intVectors[5] = { 0x0040, 0x0048, 0x0050, 0x0058, 0x0060 };
 
 	// Update scheduler, setting IME if needed
@@ -642,10 +637,10 @@ int int_request(struct GB* gb, int cycles)
 	int serviceCycles = gb->cpu.halt ? 24 : 20;
 
 	// Lower bit interrupts are highest priority
-	for (int i = 0; i < 5; i++) {
-		if (IF & IE & (1 << i)) {
-
-			// Required in this specific order to bring the CPU out of 
+	for (int i = 0; i < 5; i++) 
+	{
+		if (IF & IE & (1 << i)) 
+		{   // Required in this specific order to bring the CPU out of 
 			//		halt mode if IME is zero prior to entering halt mode
 			gb->cpu.halt = 0;
 			if (!gb->cpu.IME) break;
@@ -662,12 +657,12 @@ int int_request(struct GB* gb, int cycles)
 			gb->memory[0xFF0F] &= bitmasks[i];
 			gb->cpu.PC = intVectors[i];
 
-			// Return cycles used to service interrupt
+			// Return cycles used to service the interrupt
 			return serviceCycles;
 		}
 	}
 
-	// No interrupts requested, no sync cycles needed 
+	// No interrupts requested, no additional cycles needed 
 	return 0;
 }
 

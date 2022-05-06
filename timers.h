@@ -1,10 +1,7 @@
 #ifndef _TIMERS_H_
 #define _TIMERS_H_
 
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef signed char int8_t;
-typedef signed short int16_t;
+#include "types.h"
 
 void init_timers(struct timers* timer);
 void timers_step(struct GB* gb, int cycles);

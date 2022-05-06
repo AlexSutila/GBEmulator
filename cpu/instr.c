@@ -1,13 +1,11 @@
 #include "instr.h"
+#include "types.h"
 #include "mem.h"
 #include "cpu.h"
 
 #ifndef NDEBUG
 #include "debug.h"
 #endif
-
-// I ended up needing this for like one instruction
-typedef unsigned int uint32_t;
 
 /*
 		8 bit loads
@@ -178,7 +176,7 @@ struct instrTimingInfo add_A_##x##(struct GB* gb) { \
 	gb->cpu.F = (((gb->cpu.x & 0xF) + (gb->cpu.A & 0xF)) & 0x10) << 1; \
 	gb->cpu.F |= ((gb->cpu.x + gb->cpu.A) & 0x100) >> 4; \
 	gb->cpu.A += gb->cpu.x; \
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 4, 4 }; \
 }
 add_A_x(B) add_A_x(C) add_A_x(D) add_A_x(E) 
@@ -189,7 +187,7 @@ struct instrTimingInfo add_A_n(struct GB* gb) {
 	gb->cpu.F = (((n & 0xF) + (gb->cpu.A & 0xF)) & 0x10) << 1;
 	gb->cpu.F |= ((n + gb->cpu.A) & 0x100) >> 4;
 	gb->cpu.A += n;
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
@@ -198,7 +196,7 @@ struct instrTimingInfo add_A_HL(struct GB* gb) {
 	gb->cpu.F = (((n & 0xF) + (gb->cpu.A & 0xF)) & 0x10) << 1;
 	gb->cpu.F |= ((n + gb->cpu.A) & 0x100) >> 4;
 	gb->cpu.A += n;
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
@@ -208,7 +206,7 @@ struct instrTimingInfo adc_A_##x##(struct GB* gb) { \
 	gb->cpu.F = (((gb->cpu.x & 0xF) + (gb->cpu.A & 0xF) + c) & 0x10) << 1; \
 	gb->cpu.F |= ((gb->cpu.x + gb->cpu.A + c) & 0x100) >> 4; \
 	gb->cpu.A += gb->cpu.x + c; \
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 4, 4 }; \
 }
 adc_A_x(B) adc_A_x(C) adc_A_x(D) adc_A_x(E) 
@@ -220,7 +218,7 @@ struct instrTimingInfo adc_A_n(struct GB* gb) {
 	gb->cpu.F = (((n & 0xF) + (gb->cpu.A & 0xF) + c) & 0x10) << 1;
 	gb->cpu.F |= ((n + gb->cpu.A + c) & 0x100) >> 4;
 	gb->cpu.A += n + c;
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
@@ -230,17 +228,17 @@ struct instrTimingInfo adc_A_HL(struct GB* gb) {
 	gb->cpu.F = (((n & 0xF) + (gb->cpu.A & 0xF) + c) & 0x10) << 1;
 	gb->cpu.F |= ((n + gb->cpu.A + c) & 0x100) >> 4;
 	gb->cpu.A += n + c;
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
 #define sub_A_x(x) \
 struct instrTimingInfo sub_A_##x##(struct GB* gb) { \
 	gb->cpu.F = 0x40; \
-	gb->cpu.F |= (uint8_t)((gb->cpu.x & 0xF) > (gb->cpu.A & 0xF)) << cb_FLAG_H; \
-	gb->cpu.F |= ((uint8_t)(gb->cpu.x > gb->cpu.A) << cb_FLAG_C); \
+	gb->cpu.F |= (uint8_t)((gb->cpu.x & 0xF) > (gb->cpu.A & 0xF)) << flagBitH; \
+	gb->cpu.F |= ((uint8_t)(gb->cpu.x > gb->cpu.A) << flagBitC); \
 	gb->cpu.A -= gb->cpu.x; \
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 4, 4 }; \
 }
 sub_A_x(B) sub_A_x(C) sub_A_x(D) sub_A_x(E) 
@@ -249,20 +247,20 @@ sub_A_x(H) sub_A_x(L)            sub_A_x(A)
 struct instrTimingInfo sub_A_n(struct GB* gb) {
 	uint8_t n = RB(gb, gb->cpu.PC++, 0);
 	gb->cpu.F = 0x40;
-	gb->cpu.F |= (uint8_t)((n & 0xF) > (gb->cpu.A & 0xF)) << cb_FLAG_H;
-	gb->cpu.F |= ((uint8_t)(n > gb->cpu.A) << cb_FLAG_C);
+	gb->cpu.F |= (uint8_t)((n & 0xF) > (gb->cpu.A & 0xF)) << flagBitH;
+	gb->cpu.F |= ((uint8_t)(n > gb->cpu.A) << flagBitC);
 	gb->cpu.A -= n;
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
 struct instrTimingInfo sub_A_HL(struct GB* gb) {
 	uint8_t n = RB(gb, gb->cpu.HL, 0);
 	gb->cpu.F = 0x40;
-	gb->cpu.F |= (uint8_t)((n & 0xF) > (gb->cpu.A & 0xF)) << cb_FLAG_H;
-	gb->cpu.F |= ((uint8_t)(n > gb->cpu.A) << cb_FLAG_C);
+	gb->cpu.F |= (uint8_t)((n & 0xF) > (gb->cpu.A & 0xF)) << flagBitH;
+	gb->cpu.F |= ((uint8_t)(n > gb->cpu.A) << flagBitC);
 	gb->cpu.A -= n;
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
@@ -270,10 +268,10 @@ struct instrTimingInfo sub_A_HL(struct GB* gb) {
 struct instrTimingInfo sbc_A_##x##(struct GB* gb) { \
 	uint8_t c = ((gb->cpu.F & 0x10) >> 4); \
 	gb->cpu.F = 0x40; \
-	gb->cpu.F |= (uint8_t)((gb->cpu.x & 0xF) + c > (gb->cpu.A & 0xF)) << cb_FLAG_H; \
-	gb->cpu.F |= ((uint8_t)(((uint16_t)gb->cpu.x) + c > gb->cpu.A) << cb_FLAG_C); \
+	gb->cpu.F |= (uint8_t)((gb->cpu.x & 0xF) + c > (gb->cpu.A & 0xF)) << flagBitH; \
+	gb->cpu.F |= ((uint8_t)(((uint16_t)gb->cpu.x) + c > gb->cpu.A) << flagBitC); \
 	gb->cpu.A -= gb->cpu.x + c; \
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 4, 4 }; \
 }
 sbc_A_x(B) sbc_A_x(C) sbc_A_x(D) sbc_A_x(E)
@@ -283,10 +281,10 @@ struct instrTimingInfo sbc_A_n(struct GB* gb) {
 	uint16_t n = RB(gb, gb->cpu.PC++, 0);
 	uint8_t c = ((gb->cpu.F & 0x10) >> 4);
 	gb->cpu.F = 0x40;
-	gb->cpu.F |= (uint8_t)(((n & 0xF) + c) > (gb->cpu.A & 0xF)) << cb_FLAG_H;
-	gb->cpu.F |= ((uint8_t)((n + c) > gb->cpu.A) << cb_FLAG_C);
+	gb->cpu.F |= (uint8_t)(((n & 0xF) + c) > (gb->cpu.A & 0xF)) << flagBitH;
+	gb->cpu.F |= ((uint8_t)((n + c) > gb->cpu.A) << flagBitC);
 	gb->cpu.A -= n + c;
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
@@ -294,10 +292,10 @@ struct instrTimingInfo sbc_A_HL(struct GB* gb) {
 	uint16_t n = RB(gb, gb->cpu.HL, 0);
 	uint8_t c = ((gb->cpu.F & 0x10) >> 4);
 	gb->cpu.F = 0x40;
-	gb->cpu.F |= (uint8_t)(((n & 0xF) + c) > (gb->cpu.A & 0xF)) << cb_FLAG_H;
-	gb->cpu.F |= ((uint8_t)((n + c) > gb->cpu.A) << cb_FLAG_C);
+	gb->cpu.F |= (uint8_t)(((n & 0xF) + c) > (gb->cpu.A & 0xF)) << flagBitH;
+	gb->cpu.F |= ((uint8_t)((n + c) > gb->cpu.A) << flagBitC);
 	gb->cpu.A -= n + c;
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
@@ -305,7 +303,7 @@ struct instrTimingInfo sbc_A_HL(struct GB* gb) {
 struct instrTimingInfo and_A_##x##(struct GB* gb) { \
 	gb->cpu.F = 0x20; \
 	gb->cpu.A &= gb->cpu.x; \
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 4, 4 }; \
 }
 and_A_x(B) and_A_x(C) and_A_x(D) and_A_x(E) 
@@ -315,7 +313,7 @@ struct instrTimingInfo and_A_n(struct GB* gb) {
 	uint8_t n = RB(gb, gb->cpu.PC++, 0);
 	gb->cpu.F = 0x20;
 	gb->cpu.A &= n;
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
@@ -323,7 +321,7 @@ struct instrTimingInfo and_A_HL(struct GB* gb) {
 	uint8_t n = RB(gb, gb->cpu.HL, 0);
 	gb->cpu.F = 0x20;
 	gb->cpu.A &= n;
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
@@ -331,7 +329,7 @@ struct instrTimingInfo and_A_HL(struct GB* gb) {
 struct instrTimingInfo xor_A_##x##(struct GB* gb) { \
 	gb->cpu.F = 0x00; \
 	gb->cpu.A ^= gb->cpu.x; \
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 4, 4 }; \
 }
 xor_A_x(B) xor_A_x(C) xor_A_x(D) xor_A_x(E)
@@ -341,7 +339,7 @@ struct instrTimingInfo xor_A_n(struct GB* gb) {
 	uint8_t n = RB(gb, gb->cpu.PC++, 0);
 	gb->cpu.F = 0x00;
 	gb->cpu.A ^= n;
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
@@ -349,7 +347,7 @@ struct instrTimingInfo xor_A_HL(struct GB* gb) {
 	uint8_t n = RB(gb, gb->cpu.HL, 0);
 	gb->cpu.F = 0x00;
 	gb->cpu.A ^= n;
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
@@ -357,7 +355,7 @@ struct instrTimingInfo xor_A_HL(struct GB* gb) {
 struct instrTimingInfo or_A_##x##(struct GB* gb) { \
 	gb->cpu.F = 0x00; \
 	gb->cpu.A |= gb->cpu.x; \
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 4, 4 }; \
 }
 or_A_x(B) or_A_x(C) or_A_x(D) or_A_x(E)
@@ -367,7 +365,7 @@ struct instrTimingInfo or_A_n(struct GB* gb) {
 	uint8_t n = RB(gb, gb->cpu.PC++, 0);
 	gb->cpu.F = 0x00;
 	gb->cpu.A |= n;
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
@@ -375,16 +373,16 @@ struct instrTimingInfo or_A_HL(struct GB* gb) {
 	uint8_t n = RB(gb, gb->cpu.HL, 0);
 	gb->cpu.F = 0x00;
 	gb->cpu.A |= n;
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
 #define cp_A_x(x) \
 struct instrTimingInfo cp_A_##x##(struct GB* gb) { \
 	gb->cpu.F = 0x40; \
-	gb->cpu.F |= (uint8_t)((gb->cpu.x & 0xF) > (gb->cpu.A & 0xF)) << cb_FLAG_H; \
-	gb->cpu.F |= ((uint8_t)(gb->cpu.x > gb->cpu.A) << cb_FLAG_C); \
-	gb->cpu.F |= (uint8_t)(gb->cpu.A - gb->cpu.x == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)((gb->cpu.x & 0xF) > (gb->cpu.A & 0xF)) << flagBitH; \
+	gb->cpu.F |= ((uint8_t)(gb->cpu.x > gb->cpu.A) << flagBitC); \
+	gb->cpu.F |= (uint8_t)(gb->cpu.A - gb->cpu.x == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 4, 4 }; \
 }
 cp_A_x(B) cp_A_x(C) cp_A_x(D) cp_A_x(E)
@@ -393,18 +391,18 @@ cp_A_x(H) cp_A_x(L)           cp_A_x(A)
 struct instrTimingInfo cp_A_n(struct GB* gb) {
 	uint8_t n = RB(gb, gb->cpu.PC++, 0);
 	gb->cpu.F = 0x40;
-	gb->cpu.F |= (uint8_t)((n & 0xF) > (gb->cpu.A & 0xF)) << cb_FLAG_H;
-	gb->cpu.F |= ((uint8_t)(n > gb->cpu.A) << cb_FLAG_C);
-	gb->cpu.F |= (uint8_t)(gb->cpu.A - n == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)((n & 0xF) > (gb->cpu.A & 0xF)) << flagBitH;
+	gb->cpu.F |= ((uint8_t)(n > gb->cpu.A) << flagBitC);
+	gb->cpu.F |= (uint8_t)(gb->cpu.A - n == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
 struct instrTimingInfo cp_A_HL(struct GB* gb) {
 	uint8_t n = RB(gb, gb->cpu.HL, 0);
 	gb->cpu.F = 0x40;
-	gb->cpu.F |= (uint8_t)((n & 0xF) > (gb->cpu.A & 0xF)) << cb_FLAG_H;
-	gb->cpu.F |= ((uint8_t)(n > gb->cpu.A) << cb_FLAG_C);
-	gb->cpu.F |= (uint8_t)(gb->cpu.A - n == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)((n & 0xF) > (gb->cpu.A & 0xF)) << flagBitH;
+	gb->cpu.F |= ((uint8_t)(n > gb->cpu.A) << flagBitC);
+	gb->cpu.F |= (uint8_t)(gb->cpu.A - n == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 8, 8 };
 }
 
@@ -431,8 +429,8 @@ struct instrTimingInfo inc_A_HL(struct GB* gb) {
 #define dec_A_x(x) \
 struct instrTimingInfo dec_A_##x##(struct GB* gb) { \
 	gb->cpu.F &= ~(0b11100000); \
-	gb->cpu.F |= (uint8_t)((gb->cpu.x & 0xF) < 1) << cb_FLAG_H; \
-	gb->cpu.F |= ((uint8_t)((gb->cpu.x - 1) == 0) << cb_FLAG_Z) | (1 << cb_FLAG_N); \
+	gb->cpu.F |= (uint8_t)((gb->cpu.x & 0xF) < 1) << flagBitH; \
+	gb->cpu.F |= ((uint8_t)((gb->cpu.x - 1) == 0) << flagBitZ) | (1 << flagBitN); \
 	gb->cpu.x--; \
 	return (struct instrTimingInfo) { 4, 4 }; \
 }
@@ -442,8 +440,8 @@ dec_A_x(H) dec_A_x(L)            dec_A_x(A)
 struct instrTimingInfo dec_A_HL(struct GB* gb) {
 	uint8_t n = RB(gb, gb->cpu.HL, 0);
 	gb->cpu.F &= ~(0b11100000);
-	gb->cpu.F |= (uint8_t)((n & 0xF) < 1) << cb_FLAG_H;
-	gb->cpu.F |= ((uint8_t)((n - 1) == 0) << cb_FLAG_Z) | (1 << cb_FLAG_N);
+	gb->cpu.F |= (uint8_t)((n & 0xF) < 1) << flagBitH;
+	gb->cpu.F |= ((uint8_t)((n - 1) == 0) << flagBitZ) | (1 << flagBitN);
 	WB(gb, gb->cpu.HL, n - 1, 4);
 	return (struct instrTimingInfo) { 12, 8 };
 }
@@ -452,7 +450,7 @@ struct instrTimingInfo daa(struct GB* gb) {
 	if ((gb->cpu.F & 0x40) == 0) {
 		if ((gb->cpu.F & 0x10) != 0 || gb->cpu.A > 0x99) {
 			gb->cpu.A += 0x60;
-			gb->cpu.F |= (1 << cb_FLAG_C);
+			gb->cpu.F |= (1 << flagBitC);
 		}
 		if ((gb->cpu.F & 0x20) != 0 || (gb->cpu.A & 0x0F) > 0x9) {
 			gb->cpu.A += 0x6;
@@ -462,7 +460,7 @@ struct instrTimingInfo daa(struct GB* gb) {
 		if ((gb->cpu.F & 0x20) != 0) gb->cpu.A -= 0x06;
 	}
 	gb->cpu.F &= ~(0b10100000);
-	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(gb->cpu.A == 0) << flagBitZ;
 	return (struct instrTimingInfo) { 4, 4 };
 }
 
@@ -551,7 +549,7 @@ struct instrTimingInfo rra(struct GB* gb) {
 struct instrTimingInfo rlc_##x##(struct GB* gb) { \
 	gb->cpu.F = (gb->cpu.x & 0x80) >> 3; \
 	gb->cpu.x = (gb->cpu.x << 1) | ((gb->cpu.F & 0x10) >> 4); \
-	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 8, 8 }; \
 }
 rlc_x(B) rlc_x(C) rlc_x(D) rlc_x(E) 
@@ -562,7 +560,7 @@ struct instrTimingInfo rlc_HL(struct GB* gb) {
 	gb->cpu.F = 0x00;
 	gb->cpu.F |= (n & 0x80) >> 3;
 	n = (n << 1) | ((gb->cpu.F & 0x10) >> 4);
-	gb->cpu.F |= (uint8_t)(n == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(n == 0) << flagBitZ;
 	WB(gb, gb->cpu.HL, n, 8);
 	return (struct instrTimingInfo) { 16, 8 };
 }
@@ -572,7 +570,7 @@ struct instrTimingInfo rl_##x##(struct GB* gb) { \
 	uint8_t c = gb->cpu.F; \
 	gb->cpu.F = (gb->cpu.x & 0x80) >> 3; \
 	gb->cpu.x = (gb->cpu.x << 1) | ((c & 0x10) >> 4); \
-	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 8, 8 }; \
 }
 rl_x(B) rl_x(C) rl_x(D) rl_x(E)
@@ -584,7 +582,7 @@ struct instrTimingInfo rl_HL(struct GB* gb) {
 	gb->cpu.F = 0x00;
 	gb->cpu.F |= (n & 0x80) >> 3;
 	n = (n << 1) | ((c & 0x10) >> 4);
-	gb->cpu.F |= (uint8_t)(n == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(n == 0) << flagBitZ;
 	WB(gb, gb->cpu.HL, n, 8);
 	return (struct instrTimingInfo) { 16, 8 };
 }
@@ -593,7 +591,7 @@ struct instrTimingInfo rl_HL(struct GB* gb) {
 struct instrTimingInfo rrc_##x##(struct GB* gb) { \
 	gb->cpu.F = (gb->cpu.x & 0x1) << 4; \
 	gb->cpu.x = (gb->cpu.x >> 1) | ((gb->cpu.F & 0x10) << 3); \
-	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 8, 8 }; \
 }
 rrc_x(B) rrc_x(C) rrc_x(D) rrc_x(E)
@@ -603,7 +601,7 @@ struct instrTimingInfo rrc_HL(struct GB* gb) {
 	uint8_t n = RB(gb, gb->cpu.HL, 4);
 	gb->cpu.F = (n & 0x1) << 4;
 	n = (n >> 1) | ((gb->cpu.F & 0x10) << 3);
-	gb->cpu.F |= (uint8_t)(n == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(n == 0) << flagBitZ;
 	WB(gb, gb->cpu.HL, n, 8);
 	return (struct instrTimingInfo) { 16, 8 };
 }
@@ -613,7 +611,7 @@ struct instrTimingInfo rr_##x##(struct GB* gb) { \
 	uint8_t c = gb->cpu.F; \
 	gb->cpu.F = (gb->cpu.x & 0x1) << 4; \
 	gb->cpu.x = (gb->cpu.x >> 1) | ((c & 0x10) << 3); \
-	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 8, 8 }; \
 }
 rr_x(B) rr_x(C) rr_x(D) rr_x(E) 
@@ -625,7 +623,7 @@ struct instrTimingInfo rr_HL(struct GB* gb) {
 	gb->cpu.F = 0x00;
 	gb->cpu.F |= (n & 0x1) << 4;
 	n = (n >> 1) | ((c & 0x10) << 3);
-	gb->cpu.F |= (uint8_t)(n == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(n == 0) << flagBitZ;
 	WB(gb, gb->cpu.HL, n, 8);
 	return (struct instrTimingInfo) { 16, 8 };
 }
@@ -634,7 +632,7 @@ struct instrTimingInfo rr_HL(struct GB* gb) {
 struct instrTimingInfo sla_##x##(struct GB* gb) { \
 	gb->cpu.F = (gb->cpu.x & 0x80) >> 3; \
 	gb->cpu.x = gb->cpu.x << 1; \
-	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 8, 8 }; \
 }
 sla_x(B) sla_x(C) sla_x(D) sla_x(E)
@@ -645,7 +643,7 @@ struct instrTimingInfo sla_HL(struct GB* gb) {
 	gb->cpu.F = 0x00;
 	gb->cpu.F |= (n & 0x80) >> 3;
 	n = n << 1;
-	gb->cpu.F |= (uint8_t)(n == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(n == 0) << flagBitZ;
 	WB(gb, gb->cpu.HL, n, 8);
 	return (struct instrTimingInfo) { 16, 8 };
 }
@@ -654,7 +652,7 @@ struct instrTimingInfo sla_HL(struct GB* gb) {
 struct instrTimingInfo swap_##x##(struct GB* gb) { \
 	gb->cpu.F = 0x00; \
 	gb->cpu.x = ((gb->cpu.x & 0xF0) >> 4) | ((gb->cpu.x & 0x0F) << 4); \
-	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 8, 8 }; \
 }
 swap_x(B) swap_x(C) swap_x(D) swap_x(E)
@@ -664,16 +662,16 @@ struct instrTimingInfo swap_HL(struct GB* gb) {
 	uint8_t n = RB(gb, gb->cpu.HL, 4);
 	gb->cpu.F = 0x00;
 	n = ((n & 0xF0) >> 4) | ((n & 0x0F) << 4);
-	gb->cpu.F |= (uint8_t)(n == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(n == 0) << flagBitZ;
 	WB(gb, gb->cpu.HL, n, 8);
 	return (struct instrTimingInfo) { 16, 8 };
 }
 
 #define sra_x(x) \
 struct instrTimingInfo sra_##x##(struct GB* gb) { \
-	gb->cpu.F = (gb->cpu.x & 0x1) << cb_FLAG_C; \
+	gb->cpu.F = (gb->cpu.x & 0x1) << flagBitC; \
 	gb->cpu.x = (gb->cpu.x & 0x80) | (gb->cpu.x >> 1); \
-	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 8, 8 }; \
 }
 sra_x(B) sra_x(C) sra_x(D) sra_x(E)
@@ -681,18 +679,18 @@ sra_x(H) sra_x(L)          sra_x(A)
 
 struct instrTimingInfo sra_HL(struct GB* gb) {
 	uint8_t n = RB(gb, gb->cpu.HL, 4);
-	gb->cpu.F = (n & 0x1) << cb_FLAG_C;
+	gb->cpu.F = (n & 0x1) << flagBitC;
 	n = (n & 0x80) | (n >> 1);
-	gb->cpu.F |= (uint8_t)(n == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(n == 0) << flagBitZ;
 	WB(gb, gb->cpu.HL, n, 8);
 	return (struct instrTimingInfo) { 16, 8 };
 }
 
 #define srl_x(x) \
 struct instrTimingInfo srl_##x##(struct GB* gb) { \
-	gb->cpu.F = (gb->cpu.x & 0x1) << cb_FLAG_C; \
+	gb->cpu.F = (gb->cpu.x & 0x1) << flagBitC; \
 	gb->cpu.x = gb->cpu.x >> 1; \
-	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << cb_FLAG_Z; \
+	gb->cpu.F |= (uint8_t)(gb->cpu.x == 0) << flagBitZ; \
 	return (struct instrTimingInfo) { 8, 8 }; \
 }
 srl_x(B) srl_x(C) srl_x(D) srl_x(E)
@@ -700,9 +698,9 @@ srl_x(H) srl_x(L)          srl_x(A)
 
 struct instrTimingInfo srl_HL(struct GB* gb) {
 	uint8_t n = RB(gb, gb->cpu.HL, 4);
-	gb->cpu.F = (n & 0x1) << cb_FLAG_C;
+	gb->cpu.F = (n & 0x1) << flagBitC;
 	n = n >> 1;
-	gb->cpu.F |= (uint8_t)(n == 0) << cb_FLAG_Z;
+	gb->cpu.F |= (uint8_t)(n == 0) << flagBitZ;
 	WB(gb, gb->cpu.HL, n, 8);
 	return (struct instrTimingInfo) { 16, 8 };
 }
@@ -781,7 +779,7 @@ res_n_HL(4) res_n_HL(5) res_n_HL(6) res_n_HL(7)
 		CPU control instructions
 */
 struct instrTimingInfo ccf(struct GB* gb) {
-	gb->cpu.F ^= (1 << cb_FLAG_C);
+	gb->cpu.F ^= (1 << flagBitC);
 	gb->cpu.F &= ~(0b01100000);
 	return (struct instrTimingInfo) { 4, 4 };
 }

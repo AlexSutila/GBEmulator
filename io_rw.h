@@ -1,10 +1,7 @@
 #ifndef IO_WR_H_
 #define IO_WR_H_
 
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef signed char int8_t;
-typedef signed short int16_t;
+#include "types.h"
 
 // Reads
 uint8_t DIV_RB(struct GB* gb, uint8_t cycles);					// $FF04

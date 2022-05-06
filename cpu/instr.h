@@ -1,10 +1,7 @@
 #ifndef INSTRS_H_
 #define INSTRS_H_
 
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef signed char int8_t;
-typedef signed short int16_t;
+#include "types.h"
 
 // This contains declarations for every single opcode, besides unused ones
 

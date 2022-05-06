@@ -1,8 +1,7 @@
 #ifndef _DEBUG_H_
 #define _DEBUG_H_
 
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
+#include "types.h"
 
 struct breakpoint
 {

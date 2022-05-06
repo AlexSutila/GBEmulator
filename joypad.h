@@ -1,11 +1,7 @@
 #ifndef _JOYPAD_H_
 #define _JOYPAD_H_
 
-// Type definitions
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef signed char int8_t;
-typedef signed short int16_t;
+#include "types.h"
 
 /*
 	Bit 7 - Not used

@@ -8,7 +8,8 @@ uint8_t memAccess_NOMBC(struct cartridge* cart_ptr, uint16_t addr, uint8_t val, 
 uint8_t memAccess_MBC1(struct cartridge* cart_ptr, uint16_t addr, uint8_t val, uint8_t rw);
 uint8_t memAccess_MBC3(struct cartridge* cart_ptr, uint16_t addr, uint8_t val, uint8_t rw);
 
-enum cart_info_addresses {
+enum cart_info_addresses 
+{
 	addrTitle		= 0x0134,
 	addrCgbFlag		= 0x0143,
 	addrSgbFlag		= 0x0146,
@@ -17,7 +18,8 @@ enum cart_info_addresses {
 	addrRamSize		= 0x0149
 };
 
-enum cart_types {
+enum cart_types 
+{
 	type_romOnly		= 0x00,
 	type_mbc1			= 0x01,
 	type_mbc1_ram		= 0x02,

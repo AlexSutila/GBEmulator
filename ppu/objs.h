@@ -1,10 +1,7 @@
 #ifndef _OBJS_H_
 #define _OBJS_H_
 
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef signed char int8_t;
-typedef signed short int16_t;
+#include "types.h"
 
 // Definitions/Addresses
 #define index_DMA 0x46

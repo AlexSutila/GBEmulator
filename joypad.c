@@ -4,9 +4,6 @@
 #include "io_rw.h"
 #include "mem.h"
 
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-
 // Masks for active low selects
 #define JOYP_BOTH_BUTTONS_MASK      0b00000000
 #define JOYP_ACTION_BUTTONS_MASK	0b00010000

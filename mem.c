@@ -3,7 +3,10 @@
 #include "mem.h"
 #include "io_rw.h"
 
-static const uint8_t  m_BOOT[256] = { 
+// Full contents of the DMG bootrom, checks the cartridge header, scrolls
+//		nintendo logo and plays the funny blingy sound
+static uint8_t bootcode[256] = 
+{ 
 	0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB,
 	0x21, 0x26, 0xFF, 0x0E, 0x11, 0x3E, 0x80, 0x32, 0xE2, 0x0C, 0x3E, 0xF3,
 	0xE2, 0x32, 0x3E, 0x77, 0x77, 0x3E, 0xFC, 0xE0, 0x47, 0x11, 0x04, 0x01,
@@ -382,13 +385,12 @@ void WB(struct GB* gb, uint16_t addr, uint8_t val, uint8_t cycles)
 void gb_init(struct GB* gb)
 {
 	// Memory initializations
-	gb->sync_sel = 0;
+	gb->sync_sel = 0; 
 	gb->memory = (uint8_t*)calloc(0x10000, sizeof(uint8_t));
-	gb->bootstrap = (uint8_t*)calloc(0x100, sizeof(uint8_t));
-	memcpy(gb->bootstrap, m_BOOT, 0x100 * sizeof(uint8_t));
+	gb->bootstrap = bootcode;
 	open_romFile(&gb->cart); // Calls cart init
 
-	// Initializing mapped IO to boot values
+	// Initializing mapped IO to boot values - need to double check these
 	gb->memory[0xFF00] = 0xCF;
 	gb->memory[0xFF02] = 0x7E;
 	gb->memory[0xFF03] = 0xFF;
@@ -508,6 +510,7 @@ void gb_free(struct GB* gb)
 {
 	free_cart(&gb->cart);
 	free_ppu(&gb->ppu);
+	free(gb->memory);
 }
 
 // This only exists because the upper 3 bits of the 

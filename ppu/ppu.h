@@ -2,6 +2,7 @@
 #define PPU_H_
 
 #include <Windows.h>
+#include "types.h"
 
 /*
 	Bit 6 - LYC=LY STAT Interrupt source         (1=Enable) (Read/Write)
@@ -19,11 +20,6 @@
 	Mode 0  ___000___000___000___000___000___000________________000 85 - 208
 	Mode 1  ____________________________________11111111111111_____ 
 */
-
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef signed char int8_t;
-typedef signed short int16_t;
 
 #define SCANLINE_LENGTH 456
 #define SCANLINE_COUNT 154

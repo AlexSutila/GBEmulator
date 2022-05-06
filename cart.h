@@ -1,16 +1,13 @@
 #ifndef CART_H_
 #define CART_H_
 
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef signed char int8_t;
-typedef signed short int16_t;
+#include "types.h"
 
 // Not representative of any specific cartridge signal, simply just used
 //		for memory access to the cart to differentiate between reading
 //		and writing within the memAccess functions associated with 
 //		different memory bank controller types...
-#define CART_READ 0
+#define CART_READ  0
 #define CART_WRITE 1
 
 enum rom_sizes 

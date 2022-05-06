@@ -1,17 +1,12 @@
 #ifndef MEM_H_
 #define MEM_H_
 
+#include "types.h"
 #include "joypad.h"
 #include "timers.h"
 #include "cart.h"
 #include "cpu.h"
 #include "ppu.h"
-
-// Type definitions
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef signed char int8_t;
-typedef signed short int16_t;
 
 // Start addresses (s)
 #define s_ROM_00 	0x0000
@@ -39,7 +34,7 @@ typedef signed short int16_t;
 #define n_HRAM		0x007F
 // IE is a register ... n one byte
 
-struct GB 
+struct GB
 {
 	// Memory pointers
 	uint8_t *memory, *bootstrap;
