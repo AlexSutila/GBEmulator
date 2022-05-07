@@ -7,6 +7,8 @@
 uint8_t JOYP_RB(struct GB* gb, uint8_t cycles);                  // $FF00
 uint8_t DIV_RB(struct GB* gb, uint8_t cycles);                   // $FF04
 uint8_t TIMA_RB(struct GB* gb, uint8_t cycles);                  // $FF05
+uint8_t TMA_RB(struct GB* gb, uint8_t cycles);                   // $FF06
+uint8_t TAC_RB(struct GB* gb, uint8_t cycles);                   // $FF07
 uint8_t IF_RB(struct GB* gb, uint8_t cycles);                    // $FF0F
 uint8_t STAT_RB(struct GB* gb, uint8_t cycles);                  // $FF41
 uint8_t LY_RB(struct GB* gb, uint8_t cycles);                    // $FF44

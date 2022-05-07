@@ -818,7 +818,7 @@ struct instrTimingInfo stop(struct GB* gb) {
 		if (gb->memory[0xFFFF] & gb->memory[0xFF0F])
 			gb->cpu.PC++;
 		// Stop acts as a one byte opcode, DIV is reset
-		gb->timer.counter.value = 0x0000;
+		gb->timer.counterValue = 0x0000;
 	}
 	return (struct instrTimingInfo) { 4, 4 };
 }
