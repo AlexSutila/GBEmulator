@@ -110,7 +110,29 @@ void DIV_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 	// Synchronize the component to catch it up before the write and
 	//		then update the internal counter. All writes clear it.
 	timers_step(gb, cycles);
+	uint16_t oldCounterValue = gb->timer.counterValue;
 	gb->timer.counterValue = 0x00;
+	// A write to div resetting the internal counter also brings up 
+	//		potential to trigger the falling edge detector as one of
+	//		this bits drops from one to zero. This will increment 
+	//		the TIMA if it is enabled.
+	//		...
+	// This is where that hardware qwirk is handled
+	if (gb->timer.enable && oldCounterValue & (1 << freqMuxBits[gb->timer.freqSelect]))
+	{
+		// Falling edges do not need to be computed as there is only
+		//		potential for a single falling edge. It just checks
+		//		it the mux bit is one and if so then falling edge.
+		uint8_t oldTimaValue = gb->timer.reg_tima;
+		gb->timer.reg_tima++;
+		// Detect overflow in the tima register, if it overflows increment by tma
+		//		and set the corresponding interrupt flag bit
+		if (oldTimaValue > gb->timer.reg_tima)
+		{
+			setIFBit(gb, 2); // Request interrupt
+			gb->timer.reg_tima += gb->timer.reg_tma;
+		}
+	}
 	gb->sync_sel = 2;
 }
 
