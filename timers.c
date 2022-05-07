@@ -161,6 +161,37 @@ void TAC_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 {
 	// Accurate read timing isn't important here but write timing is
 	timers_step(gb, cycles); 
-	gb->timer.reg_tac = val;
+	// The falling edge detector can also be triggered by changing the
+	//		enable bit or frequency bits if the timer is already enabled.
+	//		...
+	// This annoying behavior is taken into account here 
+	if (gb->timer.enable)
+	{
+		uint16_t oldCounterValue = gb->timer.counterValue;
+		uint8_t  oldTimaValue = gb->timer.reg_tima;
+
+		/* Both integers below are used and treated as booleans */
+
+		// Detect falling edge due to timer disabling
+		int disableFallingEdge = (oldCounterValue & (1 << freqMuxBits[gb->timer.freqSelect]));
+		// Detect falling edge due to timer frequency change
+		int freqChangeFallingEdge = (oldCounterValue & (1 << freqMuxBits[gb->timer.freqSelect]))
+			&& !(oldCounterValue & (1 << freqMuxBits[val & 0x3]));
+
+		// If either of these is detected, increment the tima regiseter
+		if (disableFallingEdge || freqChangeFallingEdge)
+		{
+			gb->timer.reg_tima++;
+			// Detect overflow in the tima register, if it overflows increment by tma
+			//		and set the corresponding interrupt flag bit
+			if (oldTimaValue > gb->timer.reg_tima)
+			{
+				setIFBit(gb, 2); // Request interrupt
+				gb->timer.reg_tima += gb->timer.reg_tma;
+			}
+		}
+	}
+	// Update the actual value of the tac, and set sync select
+	gb->timer.reg_tac = val & 0x07;
 	gb->sync_sel = 2;
 }
