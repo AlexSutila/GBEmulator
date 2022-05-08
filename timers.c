@@ -78,6 +78,7 @@ uint8_t TIMA_RB(struct GB* gb, uint8_t cycles)
 {
 	// Increment a duplicate internal timer 
 	uint16_t futureCounter = gb->timer.counterValue + cycles;
+	uint8_t oldTimaValue = gb->timer.reg_tima;
 	// Use new timer duplicate value to calculate how many
 	//		falling edges will occur at the freq mux bit
 	//		if it is enabled.
@@ -85,7 +86,19 @@ uint8_t TIMA_RB(struct GB* gb, uint8_t cycles)
 		futureCounter, freqMuxBits[gb->timer.freqSelect]) : 0;
 	// Future value is tima+fallingEdges, if timer is disabled numFalling 
 	//		edges will be equal to zero
-	return gb->timer.reg_tima + numFallingEdges;
+	//		...
+	// If the tima overflows, the register reads zero for the first four
+	//		clock cycles. This behavior is handled here.
+	uint8_t newTimaValue = gb->timer.reg_tima + numFallingEdges;
+	if (oldTimaValue > newTimaValue && newTimaValue != 0x00)
+	{	// Check if overflow, in addition if overflowed value is 0x00 then
+		//		it is in the 4 clock cycle window to be read as zero with
+		//		no regard to the actual value of tma
+		newTimaValue += gb->timer.reg_tma;
+	}
+	// If tma is not incremented to tma in the 4 clock cycle window, this
+	//		will return zero
+	return newTimaValue;
 }
 
 uint8_t TMA_RB(struct GB* gb, uint8_t cycles)
