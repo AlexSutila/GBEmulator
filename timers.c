@@ -155,7 +155,14 @@ void TIMA_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 	// Suncrhonize the component to catch it up before the write and
 	//		then update the value of the tima register
 	timers_step(gb, cycles);
-	gb->timer.reg_tima = val;
+
+	// Using the same hack as in TIMA_RB, the difference is calculated
+	//		to determine the difference between the overflow and write
+	//		cycles. 
+	int diff = gb->timer.counterValue - ((0xFFFF << 
+		freqMuxBits[gb->timer.freqSelect]) & gb->timer.counterValue);
+	// If this is between 4 and 8, the write is ignored
+	if (diff < 4 || diff >= 8) gb->timer.reg_tima = val;
 	gb->sync_sel = 2;
 }
 
@@ -164,7 +171,7 @@ void TMA_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 {
 	// Innacurate timing could lead to a bad sample during a tima
 	//		overflow so write this register with accurate timing
-	timers_step(gb, cycles); 
+	timers_step(gb, cycles);
 	gb->timer.reg_tma = val;
 	gb->sync_sel = 2;
 }
