@@ -23,6 +23,14 @@ inline int fallingEdges(uint16_t old, uint16_t cur, uint8_t bit)
 		return ((0x8000 >> bit) + (cur >> (bit + 1)) - (old >> (bit + 1)));
 }
 
+// Determines the number of clock cycles that have passed since an overflow
+//		at a specific bit, this is used a lot for handling some of the weird
+//		hardware flukes that the TIMA presents
+inline uint8_t cyclesSinceOverflow(uint16_t counterValue, uint8_t bitnum)
+{
+	return counterValue - ((0xFFFF << freqMuxBits[bitnum]) & counterValue);
+}
+
 // ////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Initialize registers and counter value
@@ -88,15 +96,9 @@ uint8_t TIMA_RB(struct GB* gb, uint8_t cycles)
 	uint8_t newTimaValue = gb->timer.reg_tima + numFallingEdges;
 	// If it overflows increment the final return value by the mod
 	if (gb->timer.reg_tima > newTimaValue)
-	{	// For the first four clock cycles after an overflow, the tima
-		//		reads zero. Diff calculates the difference between the
-		//		counter at the read cycle, and the counter at the overflow
-		//		cycle. The difference between these two values can be used
-		//		to determine how far apart these two cycles occur
-		//		...
-		// If they are within four clock cycles, then simply return zero
-		int diff = futureCounter - ((0xFFFF<<freqMuxBits[gb->timer.freqSelect]) & futureCounter);
-		return diff < 4 ? 0 : newTimaValue + gb->timer.reg_tma;
+	{	// For the first four clock cycles after an overflow, tima is zero
+		return cyclesSinceOverflow(futureCounter, gb->timer.freqSelect) < 4 ?
+			0 : newTimaValue + gb->timer.reg_tma;
 	}
 	else return newTimaValue;
 }
@@ -155,13 +157,11 @@ void TIMA_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 	// Suncrhonize the component to catch it up before the write and
 	//		then update the value of the tima register
 	timers_step(gb, cycles);
-
-	// Using the same hack as in TIMA_RB, the difference is calculated
-	//		to determine the difference between the overflow and write
-	//		cycles. 
-	int diff = gb->timer.counterValue - ((0xFFFF << 
-		freqMuxBits[gb->timer.freqSelect]) & gb->timer.counterValue);
-	// If this is between 4 and 8, the write is ignored
+	// If the tima is written while it is being reloaded with the tma
+	//		(this actually happens 4 cycles later than you would expect,
+	//		then the write is ignored.
+	uint8_t diff = cyclesSinceOverflow(gb->timer.counterValue, gb->timer.freqSelect);
+	// Ignore write if happening during tima reload with tma
 	if (diff < 4 || diff >= 8) gb->timer.reg_tima = val;
 	gb->sync_sel = 2;
 }
