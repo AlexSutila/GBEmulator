@@ -18,9 +18,6 @@
     <ClInclude Include="cart.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="debug.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="hwio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -34,9 +31,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="types.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ppu\objs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ppu\ppu.h">
@@ -56,16 +50,10 @@
     <ClCompile Include="cpu\instr.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ppu\objs.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ppu\ppu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="cart.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="debug.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="joypad.c">

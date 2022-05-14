@@ -144,11 +144,9 @@
     <ClInclude Include="cart.h" />
     <ClInclude Include="cpu\cpu.h" />
     <ClInclude Include="cpu\instr.h" />
-    <ClInclude Include="debug.h" />
     <ClInclude Include="hwio.h" />
     <ClInclude Include="joypad.h" />
     <ClInclude Include="mem.h" />
-    <ClInclude Include="ppu\objs.h" />
     <ClInclude Include="ppu\ppu.h" />
     <ClInclude Include="timers.h" />
     <ClInclude Include="types.h" />
@@ -157,11 +155,9 @@
     <ClCompile Include="cart.c" />
     <ClCompile Include="cpu\cpu.c" />
     <ClCompile Include="cpu\instr.c" />
-    <ClCompile Include="debug.c" />
     <ClCompile Include="joypad.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="mem.c" />
-    <ClCompile Include="ppu\objs.c" />
     <ClCompile Include="ppu\ppu.c" />
     <ClCompile Include="serial.c" />
     <ClCompile Include="timers.c" />

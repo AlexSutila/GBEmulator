@@ -4,23 +4,6 @@
 #include <Windows.h>
 #include "types.h"
 
-/*
-	Bit 6 - LYC=LY STAT Interrupt source         (1=Enable) (Read/Write)
-	Bit 5 - Mode 2 OAM STAT Interrupt source     (1=Enable) (Read/Write)
-	Bit 4 - Mode 1 VBlank STAT Interrupt source  (1=Enable) (Read/Write)
-	Bit 3 - Mode 0 HBlank STAT Interrupt source  (1=Enable) (Read/Write)
-	Bit 2 - LYC=LY Flag                          (0=Different, 1=Equal) (Read Only)
-	Bit 1-0 - Mode Flag                          (Mode 0-3, see below) (Read Only)
-	          0: HBlank
-	          1: VBlank
-	          2: Searching OAM
-	          3: Transferring Data to LCD Controller
-	Mode 2  2_____2_____2_____2_____2_____2___________________2____ 80 dots
-	Mode 3  _33____33____33____33____33____33__________________3___ 168 - 291
-	Mode 0  ___000___000___000___000___000___000________________000 85 - 208
-	Mode 1  ____________________________________11111111111111_____ 
-*/
-
 #define SCANLINE_LENGTH 456
 #define SCANLINE_COUNT 154
 
@@ -30,34 +13,6 @@
 #define v_HRES 160
 #define v_WIDTH (v_HRES * v_pixelSize)
 #define v_HEIGHT (v_VRES * v_pixelSize)
-
-// Tile data definitions
-#define n_TILE_WIDTH 8
-#define n_TILE_HEIGHT 8
-#define n_TILE_COUNT 384
-
-// Definitions/Addresses
-#define index_LCDC		0xFF40
-#define index_STAT      0xFF41
-#define index_SCY       0xFF42
-#define index_SCX       0xFF43
-#define index_LY        0xFF44
-#define index_LYC       0xFF45
-#define index_BGP       0xFF47
-#define index_OBP0      0xFF48
-#define index_OBP1      0xFF49
-#define index_WY        0xFF4A
-#define index_WX        0xFF4B
-
-// LCDC bits
-#define LCDC_ENABLE_MASK	0b10000000 // LCD and PPU enable
-#define LCDC_WINMAP_MASK	0b01000000 // Window tile map area
-#define LCDC_WINEN_MASK		0b00100000 // Window enable
-#define LCDC_WINBG_MASK		0b00010000 // BG and Window tile data area
-#define LCDC_BGMAP_MASK		0b00001000 // BG tile map area
-#define LCDC_OBJS_MASK		0b00000100 // OBJ size
-#define LCDC_OBJEN_MASK		0b00000010 // OBJ enable
-#define LCDC_BGWINP_MASK	0b00000001 // BG and Window enable/priority
 
 // Tile Struct
 struct tileStruct 
@@ -76,26 +31,107 @@ struct bitmapStruct
 void init_ppu(struct PPU* ppu);
 void ppu_step(struct GB* gb, int cycles);
 void free_ppu(struct PPU* ppu);
-
 // For real time synchronized video output
 void draw_to_screen(struct GB* gb, HWND window, HDC hdc);
+
+enum statModeFlags
+{
+	/* 0b00 */ statModeHBlank,
+	/* 0b01 */ statModeVBlank,
+	/* 0b10 */ statModeOamSearch,
+	/* 0b11 */ statModeDataTrans,
+};
 
 struct PPU 
 {
 	// Bitmap stuff
 	struct bitmapStruct* bitmapBMI;
 	void* bitmap;
-	uint8_t* bitmap_PTR;
-
 	// Actual PPU stuff
-	int enabled, scanline;
-	uint8_t mode, nextMode;
-
-	// Internal scanline counter for window
-	uint8_t win_LY;
-
-	// Used to sync to video
-	int frameIncomplete;
+	int scanline, frameIncomplete;
+	// FF40 - LCD Control register
+	union
+	{
+		uint8_t reg_lcdc;
+		struct
+		{
+			/* Bit0 */ uint8_t bgwin_enable   : 1; // 0 = Off, 1 = On
+			/* Bit1 */ uint8_t obj_enable     : 1; // 0 = Off, 1 = On
+			/* Bit2 */ uint8_t obj_size       : 1; // 0=8x8, 1=8x16
+			/* Bit3 */ uint8_t bg_tilemap     : 1; // 0=9800-9BFF, 1=9C00-9FFF
+			/* Bit4 */ uint8_t bgwin_tiledata : 1; // 0=8800-97FF, 1=8000-8FFF
+			/* Bit5 */ uint8_t window_enable  : 1; // 0=Off, 1=On
+			/* Bit6 */ uint8_t window_tilemap : 1; // 0=9800-9BFF, 1=9C00-9FFF
+			/* Bit7 */ uint8_t enable         : 1; // 0=Off, 1=On
+		};
+	};
+	// FF41 - LCD Status register
+	union
+	{
+		uint8_t reg_stat;
+		struct
+		{
+			/* Bits0-1 */ uint8_t mode_flag          : 2; // see statModeFlags enumeration (Read Only)
+			/* Bit2    */ uint8_t ly_is_lyc          : 1; // (0=Different, 1=Equal) (Read Only)
+			// The following are enables for different events that trigger a stat interrupt
+			/* Bit3    */ uint8_t hblank_stat_src    : 1; // (1 = Enable) (Read / Write)
+			/* Bit4    */ uint8_t vblank_stat_src    : 1; // (1 = Enable) (Read / Write)
+			/* Bit5    */ uint8_t oam_stat_src       : 1; // (1 = Enable) (Read / Write)
+			/* Bit6    */ uint8_t ly_is_lyc_stat_src : 1; // (1 = Enable) (Read / Write)
+			// The next bit is unused, thats why it has funny name so I don't accidentally use it
+			/* Bit7    */ uint8_t amongUs            : 1; // Unused bit
+		};
+	};
+	// FF42 - SCY register
+	uint8_t reg_scy; // Scrolls vertically
+	// FF43 - SCX register
+	uint8_t reg_scx; // Scrolls horizontally
+	// FF44 - LY register (Read only)
+	uint8_t reg_ly;  // LCD Y coordinate, or the current scanline
+	// FF45 - LYC register
+	uint8_t reg_lyc; // LY compare value
+	// FF46 - DMA register
+	uint8_t reg_dma; // Used to start a DMA transfer
+	// FF47 - BGP regisetr
+	union
+	{	// Background pallete
+		uint8_t reg_bgp;
+		struct
+		{
+			/* Bits0-1 */ uint8_t bg_color_idx0 : 2;
+			/* Bits2-3 */ uint8_t bg_color_idx1 : 2;
+			/* Bits4-5 */ uint8_t bg_color_idx2 : 2;
+			/* Bits6-7 */ uint8_t bg_color_idx3 : 2;
+		};
+	};
+	// FF48 - OBP0 register
+	union
+	{	// Background pallete
+		uint8_t reg_obp0;
+		struct
+		{
+			/* Bits0-1 */ uint8_t obp0_color_idx0 : 2;
+			/* Bits2-3 */ uint8_t obp0_color_idx1 : 2;
+			/* Bits4-5 */ uint8_t obp0_color_idx2 : 2;
+			/* Bits6-7 */ uint8_t obp0_color_idx3 : 2;
+		};
+	};
+	// FF49 - OBP0 register
+	union
+	{	// Background pallete
+		uint8_t reg_obp1;
+		struct
+		{
+			/* Bits0-1 */ uint8_t obp1_color_idx0 : 2;
+			/* Bits2-3 */ uint8_t obp1_color_idx1 : 2;
+			/* Bits4-5 */ uint8_t obp1_color_idx2 : 2;
+			/* Bits6-7 */ uint8_t obp1_color_idx3 : 2;
+		};
+	};
+	// FF4A - WY register
+	uint8_t reg_wy;  // Window y position
+	// FF4B - WX register
+	uint8_t reg_wx;  // Window x + 7
 };
 
 #endif

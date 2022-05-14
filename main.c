@@ -1,10 +1,6 @@
 #include <Windows.h>
 #include "mem.h"
 
-#ifndef NDEBUG
-#include "debug.h"
-#endif
-
 // Condition to keep emulator running, to be set in callback upon exit
 int running = 1;
 
@@ -37,13 +33,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE pInstance, PWSTR cmdLine, int c
 	RegisterClass(&windowClass);
 	HWND window = CreateWindowEx(0, className, L"GameBoy Emulator", WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, (v_HRES + 4) * 4, (v_VRES + 10) * 4, 0, 0, instance, 0);
 	HDC hdc = GetDC(window);
-
-	// Debugger initialization
-	#ifndef NDEBUG
-	HANDLE hConsole;
-	struct breakpoint breakpoints[6];
-	debug_init(&hConsole, breakpoints);
-	#endif
 
 	// Emulator initialization
 	struct GB emulator;
@@ -102,19 +91,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE pInstance, PWSTR cmdLine, int c
 
 			// For an explanation on how the fields of the instrTimingInfo were determined and what exactly they
 			//		do, see cpu.h
-
-			// Break if bp reached, update cycle counter
-			#ifndef NDEBUG
-			tCycles += total;
-
-			int breakpointHit = 0;
-			for (int i = 0; i < 6; i++)
-			{
-				if (breakpoints[i].enabled && breakpoints[i].addr == emulator.cpu.PC)
-					breakpointHit = 1;
-			}
-			if (breakpointHit) debug_break(&emulator, &hConsole, window, hdc, breakpoints);
-			#endif
 		}
 	
 		// Push frame to screen also handles real time synchronization for the time being
@@ -123,16 +99,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE pInstance, PWSTR cmdLine, int c
 		// Update the key states, this happens once a frame which is not as often as it does not real hardware
 		//		but what ever. Unless you are doing some weird stuff you shouldn't really be able to tell.
 		update_keyStates(&emulator);
-
-		#ifndef NDEBUG
-		// Update debug info and show console if requested (press B)
-		if (GetAsyncKeyState(0x42)) debug_break(&emulator, &hConsole, window, hdc, breakpoints);
-		#endif
 	}
-
-	#ifndef NDEBUG
-	debug_deinit();
-	#endif
 
 	gb_free(&emulator);
 	return 0;
