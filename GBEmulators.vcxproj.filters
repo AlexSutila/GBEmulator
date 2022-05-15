@@ -71,5 +71,8 @@
     <ClCompile Include="timers.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ppu\ppuModes.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

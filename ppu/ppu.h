@@ -14,15 +14,36 @@
 #define v_WIDTH (v_HRES * v_pixelSize)
 #define v_HEIGHT (v_VRES * v_pixelSize)
 
-// Tile Struct
-struct tileStruct 
-{
-    uint8_t bytes[8][2];
+struct ppuCycleTimingInfo
+{	// This is a struct that will help determine how many cycles were spent in a specific
+	//		mode, and if there are any left over cycles from that mode to execute in the
+	//		next ppu mode when syncrhonizing the ppu a given amount of cycles
+	//		...
+	// This naming should be fairly self explanitory
+	uint8_t spentCycles, leftOverCycles;
 };
 
-// BMI Struct
+// Calculate how many cycles were spent in a ppu mode and how many cycles are left over
+//		given the following:
+//		current - the current value of the dot counter (1 dot = 1 clock cycles, people
+//		          just call them dots when talking about the PPU, even in the docs
+//		max     - the max value of the dot counter for the current mode
+//		amount  - the amount of clock cycles to be stepped, determined by the
+//		          most recent cpu instruction executed
+inline struct ppuCycleTimingInfo calcPpuTimingInfo(int current, int max, uint8_t amount)
+{	// Calculate how many cycles are left over
+	uint8_t leftOverCycles = (current + amount >= max) ?
+		current + amount - max : 0;
+	// spentCycles are all cycles that are not leftover
+	uint8_t spentCycles = amount - leftOverCycles;
+	// See the ppuCycleTimingInfo struct above
+	return (struct ppuCycleTimingInfo) { spentCycles, leftOverCycles };
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////
+
 struct bitmapStruct
-{
+{	// BMI Struct which contains information for the bitmap, as well as the color palette
 	BITMAPINFO bmi;
 	unsigned char palette[256];
 };
@@ -31,24 +52,44 @@ struct bitmapStruct
 void init_ppu(struct PPU* ppu);
 void ppu_step(struct GB* gb, int cycles);
 void free_ppu(struct PPU* ppu);
+
+// Functions representing each PPU mode and how they behave upon their entries and completions
+/* ----------------------------------- */
+uint8_t lHBlank(struct GB* gb);    // Mode 0
+void eHBlank(struct GB* gb);
+/* ----------------------------------- */
+uint8_t lVBlank(struct GB* gb);    // Mode 1
+void eVBlank(struct GB* gb);
+/* ----------------------------------- */
+uint8_t lOamSearch(struct GB* gb); // Mode 2
+void eOamSearch(struct GB* gb);
+/* ----------------------------------- */
+uint8_t lDataTrans(struct GB* gb); // Mode 3
+void eDataTrans(struct GB* gb);
+
 // For real time synchronized video output
 void draw_to_screen(struct GB* gb, HWND window, HDC hdc);
 
+// Enumeration for representing the mode values in the stat register
+//		for each PPU mode. The bottom two bits will align with the
+//		corresponding mode bits value that will appear when the PPU
+//		is in the respective mode. 
 enum statModeFlags
 {
-	/* 0b00 */ statModeHBlank,
-	/* 0b01 */ statModeVBlank,
-	/* 0b10 */ statModeOamSearch,
-	/* 0b11 */ statModeDataTrans,
+	statModeHBlank    = 0b00,
+	statModeVBlank    = 0b01,
+	statModeOamSearch = 0b10,
+	statModeDataTrans = 0b11,
+	// TODO, work scanline 153 in because its weird and the reason why
+	//		I made my ppu_step function super flexible
 };
 
 struct PPU 
-{
-	// Bitmap stuff
+{	// Bitmap stuff
 	struct bitmapStruct* bitmapBMI;
 	void* bitmap;
 	// Actual PPU stuff
-	int scanline, frameIncomplete;
+	int dotCounter, frameIncomplete;
 	// FF40 - LCD Control register
 	union
 	{
@@ -62,7 +103,7 @@ struct PPU
 			/* Bit4 */ uint8_t bgwin_tiledata : 1; // 0=8800-97FF, 1=8000-8FFF
 			/* Bit5 */ uint8_t window_enable  : 1; // 0=Off, 1=On
 			/* Bit6 */ uint8_t window_tilemap : 1; // 0=9800-9BFF, 1=9C00-9FFF
-			/* Bit7 */ uint8_t enable         : 1; // 0=Off, 1=On
+			/* Bit7 */ uint8_t ppu_enable     : 1; // 0=Off, 1=On
 		};
 	};
 	// FF41 - LCD Status register
@@ -71,7 +112,7 @@ struct PPU
 		uint8_t reg_stat;
 		struct
 		{
-			/* Bits0-1 */ uint8_t mode_flag          : 2; // see statModeFlags enumeration (Read Only)
+			/* Bits0-1 */ uint8_t mode_bits          : 2; // see statModeFlags enumeration (Read Only)
 			/* Bit2    */ uint8_t ly_is_lyc          : 1; // (0=Different, 1=Equal) (Read Only)
 			// The following are enables for different events that trigger a stat interrupt
 			/* Bit3    */ uint8_t hblank_stat_src    : 1; // (1 = Enable) (Read / Write)
