@@ -90,6 +90,7 @@ struct PPU
 	void* bitmap;
 	// Actual PPU stuff
 	int dotCounter, frameIncomplete;
+	uint8_t state;
 	// FF40 - LCD Control register
 	union
 	{

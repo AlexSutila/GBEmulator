@@ -24,8 +24,8 @@ uint8_t lHBlank(struct GB* gb)
 }
 void eHBlank(struct GB* gb)
 {
-	// Update the stat register mode bits
-	gb->ppu.mode_bits = 0b00;
+	// Update the PPU mode
+	gb->ppu.state = statModeHBlank;
 }
 /* Vertical Blank */
 uint8_t lVBlank(struct GB* gb)
@@ -38,8 +38,8 @@ uint8_t lVBlank(struct GB* gb)
 }
 void eVBlank(struct GB* gb)
 {
-	// Update the stat register mode bits
-	gb->ppu.mode_bits = 0b01;
+	// Update the PPU mode
+	gb->ppu.state = statModeVBlank;
 }
 /* Oam Search */
 uint8_t lOamSearch(struct GB* gb)
@@ -49,8 +49,8 @@ uint8_t lOamSearch(struct GB* gb)
 }
 void eOamSearch(struct GB* gb)
 {
-	// Update the stat register mode bits
-	gb->ppu.mode_bits = 0b10;
+	// Update the PPU mode
+	gb->ppu.state = statModeOamSearch;
 }
 /* Data Transfer */
 uint8_t lDataTrans(struct GB* gb)
@@ -60,7 +60,7 @@ uint8_t lDataTrans(struct GB* gb)
 }
 void eDataTrans(struct GB* gb)
 {
-	// Update the stat register mode bits
-	gb->ppu.mode_bits = 0b11;
+	// Update the PPU mode
+	gb->ppu.state = statModeDataTrans;
 }
 

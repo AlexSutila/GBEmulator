@@ -5,7 +5,9 @@
 
 // PPU initialize
 void init_ppu(struct PPU* ppu) 
-{	// Reset the PPU scanline dot counter
+{	// Set the PPU state, just to be safe
+	ppu->state = statModeOamSearch;
+	// Reset the PPU scanline dot counter
 	ppu->dotCounter = 0;
 	// By default, the frame will be incomplete, this variable
 	//		is intended to act like a boolean
@@ -89,7 +91,7 @@ void ppu_step(struct GB* gb, int cycles)
 	//		recursive call. 
 	if (gb->ppu.ppu_enable)
 	{
-		int curMaxDot = maxDots[gb->ppu.mode_bits]; // Using the mode bits here is stupid - will change this soom
+		int curMaxDot = maxDots[gb->ppu.state];
 		// Calculate timing information and update the dot counter
 		struct ppuCycleTimingInfo timing = calcPpuTimingInfo(gb->ppu.dotCounter, curMaxDot, cycles);
 		gb->ppu.dotCounter = (gb->ppu.dotCounter + timing.spentCycles) % 456;
@@ -97,8 +99,9 @@ void ppu_step(struct GB* gb, int cycles)
 		//		was in is now complete and it is time to start executing the next mode.
 		if (timing.leftOverCycles > 0)
 		{	// Since there are clock cycles that bled into the next mode, the exit function of the
-			//		old mode can be called.
-			uint8_t newMode = (*exitFuncs[gb->ppu.mode_bits])(gb);
+			//		old mode can be called. Also, update the stat mode bits.
+			uint8_t newMode = (*exitFuncs[gb->ppu.state])(gb);
+			gb->ppu.mode_bits = newMode & 0x3;
 			// In addition, the entry function of the new mode being entered can be called. Which
 			//		function is called is determined by the next state logic of the exit function.
 			(*entryFuncs[newMode])(gb);
@@ -216,7 +219,9 @@ void LCDC_WB(struct GB* gb, uint8_t val, uint8_t cycles) // NEEDS WORK
 		gb->ppu.dotCounter = 0;
 		// Reset LY
 		gb->ppu.reg_ly = 0x00;
-		eOamSearch(gb);
+		// Reset the state to OAM search, make sure to update mode bits
+		gb->ppu.state = statModeOamSearch;
+		gb->ppu.mode_bits = 0b10;
 	}
 	// Update the actual value of the register
 	gb->ppu.reg_lcdc = val;
