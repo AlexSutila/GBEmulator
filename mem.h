@@ -53,7 +53,7 @@ struct GB
 inline void setIFBit(struct GB* gb, uint8_t bitNum)
 {
 	// FFOF is the address of the IF register
-	gb->memory[0xFF0F] = 1 << bitNum;
+	gb->memory[0xFF0F] |= 1 << bitNum;
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////
