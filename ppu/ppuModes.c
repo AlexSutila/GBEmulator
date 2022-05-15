@@ -43,6 +43,8 @@ uint8_t lVBlank(struct GB* gb)
 }
 void eVBlank(struct GB* gb)
 {
+	// If on scanline 144, trigger vblank interrupt
+	if (gb->ppu.reg_ly == 144) setIFBit(gb, 0);
 	// Update the PPU mode
 	gb->ppu.state = statModeVBlank;
 }

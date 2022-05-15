@@ -98,6 +98,11 @@ void eDataTrans(struct GB* gb);
 // For real time synchronized video output
 void draw_to_screen(struct GB* gb, HWND window, HDC hdc);
 
+// Stat IRQ is triggered by the rising edge of an internal signal that is high when one of the
+//		conditions is met, see stat register farther down. This updates that internal signal 
+//		and requests the interrupt when appropriate.
+void update_stat_signal(struct GB* gb);
+
 // Enumeration for representing the mode values in the stat register
 //		for each PPU mode. The bottom two bits will align with the
 //		corresponding mode bits value that will appear when the PPU
@@ -120,7 +125,7 @@ struct PPU
 	void* bitmap;
 	// Actual PPU stuff
 	int dotCounter, frameIncomplete;
-	uint8_t state;
+	uint8_t state, stat_irq_signal;
 	// FF40 - LCD Control register
 	union
 	{

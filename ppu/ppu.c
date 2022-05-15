@@ -7,7 +7,8 @@
 void init_ppu(struct PPU* ppu) 
 {	// Set the PPU state, just to be safe
 	ppu->state = statModeOamSearch;
-	// Reset the PPU scanline dot counter
+	// Reset the PPU scanline dot counter and stat irq signal
+	ppu->stat_irq_signal = 0;
 	ppu->dotCounter = 0;
 	// By default, the frame will be incomplete, this variable
 	//		is intended to act like a boolean
@@ -94,10 +95,11 @@ void ppu_step(struct GB* gb, int cycles)
 		int curMaxDot = maxDots[gb->ppu.state];
 		// Calculate timing information and update the dot counter
 		struct ppuCycleTimingInfo timing = calcPpuTimingInfo(gb->ppu.dotCounter, curMaxDot, cycles);
+		int oldDotCounter  = gb->ppu.dotCounter; // Keep track of this to check for overflow
 		gb->ppu.dotCounter = (gb->ppu.dotCounter + timing.spentCycles) % 456;
 		// Determine if there are any bleed over cycles, and if there are the mode the PPU 
 		//		was in is now complete and it is time to start executing the next mode.
-		if (timing.leftOverCycles > 0)
+		if (timing.leftOverCycles > 0 || oldDotCounter > gb->ppu.dotCounter)
 		{	// Since there are clock cycles that bled into the next mode, the exit function of the
 			//		old mode can be called. Also, update the stat mode bits.
 			uint8_t newMode = (*exitFuncs[gb->ppu.state])(gb);
@@ -110,6 +112,8 @@ void ppu_step(struct GB* gb, int cycles)
 			//		is handled recursively. 
 			ppu_step(gb, timing.leftOverCycles);
 		}
+		// Update the internal stat irq signal, and trigger an interrupt when appropriate
+		update_stat_signal(gb);
 	}
 }
 
@@ -143,6 +147,22 @@ void draw_to_screen(struct GB* gb, HWND window, HDC hdc)
 		DispatchMessage(&msg);
 	}
 	QueryPerformanceCounter(&start);
+}
+
+void update_stat_signal(struct GB* gb)
+{
+	uint8_t old = gb->ppu.stat_irq_signal;
+	// The conditions following the boolean ands are the enables for the 
+	//		respective interrupt sources
+	uint8_t cond1 = (gb->ppu.reg_ly == gb->ppu.reg_lyc) && (gb->ppu.ly_is_lyc_stat_src);
+	uint8_t cond2 = (gb->ppu.mode_bits == 0x0) && (gb->ppu.hblank_stat_src);
+	uint8_t cond3 = (gb->ppu.mode_bits == 0x2) && (gb->ppu.oam_stat_src);
+	// According to the docs, for what ever reason either one of the enables below satisfies
+	//		this condition and will set the internal signal. Makes no sense, but okay
+	uint8_t cond4 = (gb->ppu.mode_bits == 0x1) && (gb->ppu.oam_stat_src || gb->ppu.vblank_stat_src);
+	// Update the signal, and trigger an interrupt if a rising edge is detected
+	gb->ppu.stat_irq_signal = cond1 || cond2 || cond3 || cond4;
+	if (gb->ppu.stat_irq_signal && !old) setIFBit(gb, 1);
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -209,6 +229,8 @@ void LCDC_WB(struct GB* gb, uint8_t val, uint8_t cycles) // NEEDS WORK
 	if (oldEnableValue && !(val & 0x80) /* PPU turning off */)
 	{	// Reset the dot counter
 		gb->ppu.dotCounter = 0;
+		// Reset stat internal signal
+		gb->ppu.stat_irq_signal = 0;
 		// Reset LY
 		gb->ppu.reg_ly = 0x00;
 		// This is just zero when its off
