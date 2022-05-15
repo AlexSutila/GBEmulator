@@ -3,10 +3,6 @@
 #include "mem.h"
 #include "cpu.h"
 
-#ifndef NDEBUG
-#include "debug.h"
-#endif
-
 /*
 		8 bit loads
 */
@@ -885,10 +881,6 @@ jp_f_PC_dd(NZ, 0x80, 0x00) jp_f_PC_dd(NC, 0x10, 0x00)
  jp_f_PC_dd(Z, 0x80, 0x80)  jp_f_PC_dd(C, 0x10, 0x10)
 
 struct instrTimingInfo call_nn(struct GB* gb) {
-	#ifndef NDEBUG
-	callStackPush(gb->cpu.PC - 1);
-	#endif
-
 	uint16_t nn = RB(gb, gb->cpu.PC++, 0);
 	nn |= RB(gb, gb->cpu.PC++, 0) << 8;
 	WB(gb, --gb->cpu.SP, (uint8_t)(gb->cpu.PC >> 8), 0);
@@ -897,23 +889,6 @@ struct instrTimingInfo call_nn(struct GB* gb) {
 	return (struct instrTimingInfo) { 24, 24 };
 }
 
-#ifndef NDEBUG
-#define call_f_nn(cond, mask, val) \
-struct instrTimingInfo call_##cond##_nn(struct GB* gb) { \
-	if ((gb->cpu.F & mask) == val) { \
-		callStackPush(gb->cpu.PC - 1); \
-		uint16_t nn = RB(gb, gb->cpu.PC++, 0); \
-		nn |= RB(gb, gb->cpu.PC++, 0) << 8; \
-		WB(gb, --gb->cpu.SP, (uint8_t)(gb->cpu.PC >> 8), 0); \
-		WB(gb, --gb->cpu.SP, (uint8_t)(gb->cpu.PC & 0xFF), 0); \
-		gb->cpu.PC = nn; \
-		return (struct instrTimingInfo) { 24, 24 }; \
-	} else { \
-		gb->cpu.PC += 2; \
-		return (struct instrTimingInfo) { 12, 12 }; \
-	} \
-}
-#else
 #define call_f_nn(cond, mask, val) \
 struct instrTimingInfo call_##cond##_nn(struct GB* gb) { \
 	if ((gb->cpu.F & mask) == val) { \
@@ -928,7 +903,6 @@ struct instrTimingInfo call_##cond##_nn(struct GB* gb) { \
 		return (struct instrTimingInfo) { 12, 12 }; \
 	} \
 }
-#endif
 
 call_f_nn(NZ, 0x80, 0x00) call_f_nn(NC, 0x10, 0x00)
  call_f_nn(Z, 0x80, 0x80)  call_f_nn(C, 0x10, 0x10)
@@ -936,26 +910,9 @@ call_f_nn(NZ, 0x80, 0x00) call_f_nn(NC, 0x10, 0x00)
 struct instrTimingInfo ret(struct GB* gb) {
 	gb->cpu.PC = RB(gb, gb->cpu.SP++, 0);
 	gb->cpu.PC |= RB(gb, gb->cpu.SP++, 0) << 8;
-
-	#ifndef NDEBUG
-	callStackPop();
-	#endif
 	return (struct instrTimingInfo) { 16, 16 };
 }
 
-#ifndef NDEBUG
-#define ret_f(cond, mask, val) \
-struct instrTimingInfo ret_##cond##(struct GB* gb) { \
-	if ((gb->cpu.F & mask) == val) { \
-		gb->cpu.PC = RB(gb, gb->cpu.SP++, 0); \
-		gb->cpu.PC |= RB(gb, gb->cpu.SP++, 0) << 8; \
-		callStackPop(); \
-		return (struct instrTimingInfo) { 20, 20 }; \
-	} else { \
-		return (struct instrTimingInfo) { 8, 8 }; \
-	} \
-}
-#else
 #define ret_f(cond, mask, val) \
 struct instrTimingInfo ret_##cond##(struct GB* gb) { \
 	if ((gb->cpu.F & mask) == val) { \
@@ -966,7 +923,6 @@ struct instrTimingInfo ret_##cond##(struct GB* gb) { \
 		return (struct instrTimingInfo) { 8, 8 }; \
 	} \
 }
-#endif
 
 ret_f(NZ, 0x80, 0x00) ret_f(NC, 0x10, 0x00)
  ret_f(Z, 0x80, 0x80)  ret_f(C, 0x10, 0x10)
@@ -975,10 +931,6 @@ struct instrTimingInfo reti(struct GB* gb) {
 	gb->cpu.IME_scheduler |= 0x8000;
 	gb->cpu.PC = RB(gb, gb->cpu.SP++, 0);
 	gb->cpu.PC |= RB(gb, gb->cpu.SP++, 0) << 8;
-
-	#ifndef NDEBUG
-	callStackPop();
-	#endif
 	return (struct instrTimingInfo) { 16, 16 };
 }
 
