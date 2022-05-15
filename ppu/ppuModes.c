@@ -60,15 +60,16 @@ void eOamSearch(struct GB* gb)
 	gb->ppu.state = statModeOamSearch;
 }
 /* Data Transfer */
+#define TILEMAP_RES 256 // 32 * 8 - Tile maps are 32 tiles times 8 pixels, both directions
 uint8_t lDataTrans(struct GB* gb)
-{	// Determine the tile map base address for the background and window
+{	// If the background and window are enabled, then draw the scanline to the frame buffer
 	if (gb->ppu.bgwin_enable)
-	{
+	{	// Determine the tile map base address for the background and window
 		uint16_t win_map_base = gb->ppu.window_tilemap ? 0x9C00 : 0x9800;
 		uint16_t bg_map_base  = gb->ppu.bg_tilemap     ? 0x9C00 : 0x9800;
 		// Row calculations used later for indexing tilemaps and tiles
-		const int row_index = gb->ppu.reg_ly / 8;
-		const int row_mod = gb->ppu.reg_ly % 8;
+		const int row_index = ((gb->ppu.reg_ly + gb->ppu.reg_scy) % TILEMAP_RES) / 8;
+		const int row_mod   = ((gb->ppu.reg_ly + gb->ppu.reg_scy) % TILEMAP_RES) % 8;
 		// Create a pointer to the start of the scanline in the frame buffer
 		uint8_t* bitmap_ptr = (uint8_t*)(gb->ppu.bitmap) + (gb->ppu.reg_ly * v_HRES);
 		// An index integer to keep track of the current pixel x position
@@ -76,8 +77,8 @@ uint8_t lDataTrans(struct GB* gb)
 		// Start writing the background to the frame buffer
 		for (cur_pixel = 0; cur_pixel < 160; cur_pixel++)
 		{	// Column calculations used for indexing tilemap and tile
-			const int col_index = cur_pixel / 8;
-			const int col_mod = cur_pixel % 8;
+			const int col_index = ((cur_pixel + gb->ppu.reg_scx) % TILEMAP_RES) / 8;
+			const int col_mod   = ((cur_pixel + gb->ppu.reg_scx) % TILEMAP_RES) % 8;
 			// Obtain the base address of the tile with calculated index
 			uint16_t bg_map_index = col_index + (row_index * 32); // tilemaps are 32 x 32 tiles
 			const struct tileStruct* cur_tile = tile_access(gb, bg_map_base, bg_map_index);
@@ -96,6 +97,7 @@ uint8_t lDataTrans(struct GB* gb)
 	}
 	return statModeHBlank;
 }
+#undef TILEMAP_RES
 void eDataTrans(struct GB* gb)
 {
 	// Update the PPU mode

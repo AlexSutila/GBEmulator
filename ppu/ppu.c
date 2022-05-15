@@ -16,6 +16,8 @@ void init_ppu(struct PPU* ppu)
 	// Initialize known register values
 	ppu->reg_lcdc = 0x00;
 	ppu->reg_stat = 0x80;
+	ppu->reg_scx  = 0x00;
+	ppu->reg_scy  = 0x00;
 	ppu->reg_ly   = 0x00;
 	ppu->reg_dma  = 0xFF;
 	ppu->reg_bgp  = 0xFC;
