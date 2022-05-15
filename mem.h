@@ -37,7 +37,7 @@
 struct GB
 {
 	// Memory pointers
-	uint8_t *memory, *bootstrap;
+	uint8_t *memory, *vram, *bootstrap;
 	uint8_t sync_sel;
 
 	// Components
@@ -56,6 +56,8 @@ inline void setIFBit(struct GB* gb, uint8_t bitNum)
 	gb->memory[0xFF0F] = 1 << bitNum;
 }
 
+// ////////////////////////////////////////////////////////////////////////////////////////////////
+
 // These read/write functions are to be used specifically by the CPU and by the
 //		CPU only. The cycles field serves as an indicator as to how many cycles
 //		ahead a sample should be read, or how many cycles a given component should
@@ -69,10 +71,17 @@ inline void setIFBit(struct GB* gb, uint8_t bitNum)
 uint8_t RB(struct GB* gb, uint16_t addr, uint8_t cycles);
 void WB(struct GB* gb, uint16_t addr, uint8_t val, uint8_t cycles);
 
-// TODO:
-// Create functions here for the PPU to access VRAM and eventually after some
-//		rewriting, have the PPU call those instead of having it poke into the
-//		memory array directly. 
+// ////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Exists for the PPU to access tiles in the tile data section of VRAM. Two
+//		tile maps can be selected, and the background and window can be using
+//		two different tile maps at the same time so the base address of the 
+//		tile map needs to be provided. Use only 0x9800 or 0x9C00
+const struct tileStruct* tile_access(struct GB* gb, uint16_t map_base, uint16_t map_index);
+// Access a specific sprite, given the index into object attribute memory
+const struct spriteStruct* objattr_access(struct GB* gb, uint16_t index);
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////
 
 void gb_init(struct GB* gb);
 void gb_free(struct GB* gb);

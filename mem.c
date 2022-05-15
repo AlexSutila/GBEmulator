@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdlib.h>
 #include "mem.h"
+#include "ppu.h"
 #include "hwio.h"
 
 // Full contents of the DMG bootrom, checks the cartridge header, scrolls
@@ -58,6 +59,8 @@ void open_romFile(struct cartridge* cart_ptr) {
 	}
 	else exit(0);
 }
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////
 
 uint8_t RB(struct GB* gb, uint16_t addr, uint8_t cycles)
 {
@@ -200,6 +203,10 @@ uint8_t RB(struct GB* gb, uint16_t addr, uint8_t cycles)
 	// Cart read - ROM
 	else if (addr >= 0x0100 && addr <= 0x7FFF) {
 		return (*gb->cart.memAccess)(&gb->cart, addr, 0xFF, CART_READ);
+	}
+	// VRAM
+	else if (addr >= 0x8000 && addr <= 0x9FFF) {
+		return gb->vram[addr - 0x8000];
 	}
 	// Cart read - RAM
 	else if (addr >= 0xA000 && addr <= 0xBFFF) {
@@ -360,6 +367,10 @@ void WB(struct GB* gb, uint16_t addr, uint8_t val, uint8_t cycles)
 	if (addr >= 0x0000 && addr <= 0x7FFF) {
 		(*gb->cart.memAccess)(&gb->cart, addr, val, CART_WRITE);
 	}
+	// VRAM
+	else if (addr >= 0x8000 && addr <= 0x9FFF) {
+		gb->vram[addr - 0x8000] = val;
+	}
 	// Cart re-map
 	else if (addr >= 0xA000 && addr <= 0xBFFF) {
 		(*gb->cart.memAccess)(&gb->cart, addr, val, CART_WRITE);
@@ -382,11 +393,43 @@ void WB(struct GB* gb, uint16_t addr, uint8_t val, uint8_t cycles)
 	else gb->memory[addr] = val;
 }
 
+// ////////////////////////////////////////////////////////////////////////////////////////////////
+
+#define VRAM_BASE_ADDR 0x8000
+// Access a specific tile, given the tile map base address and index
+const struct tileStruct* tile_access(struct GB* gb, uint16_t map_base, uint16_t map_index)
+{	// Obtain the tile index from the tile map, selected by the map_base. Important, map_base
+	//		should only ever be 0x9800 or 0x9C00 as there are only two tile maps
+	uint16_t tiledata_index = gb->vram[map_base + map_index - VRAM_BASE_ADDR];
+	// Tiles are indexed one of two ways, using either signed or unsigned addressing. This is
+	//		determined by LCDC bit 4
+	if (gb->ppu.bgwin_tiledata)
+	{	// Unsigned tile addressing, uses 0x8000 as base pointer
+		return (struct tileStruct*)&gb->vram[tiledata_index*sizeof(struct tileStruct)];
+	}
+	else
+	{	// Signed tile addressing, uses 0x9000 as base pointer
+		int16_t signed_index = (int16_t)tiledata_index;
+		return (struct tileStruct*)&gb->vram[0x1000+(signed_index*sizeof(struct tileStruct))];
+	}
+}
+// Access a specific sprite, given the index into object attribute memory
+const struct spriteStruct* objattr_access(struct GB* gb, uint16_t index)
+{
+	struct spriteStruct* sprites = (struct spriteStruct*)(gb->memory + 0xFE00);
+	return &sprites[index];
+}
+#undef VRAM_BASE_ADDR
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////
+
 void gb_init(struct GB* gb)
 {
 	// Memory initializations
-	gb->sync_sel = 0; 
-	gb->memory = (uint8_t*)calloc(0x10000, sizeof(uint8_t));
+	gb->sync_sel = 0;
+	gb->memory = (uint8_t*)calloc(0x10000, sizeof(uint8_t)); // Do not plan on sticking with this 
+	                                                         // use of direct addressing, wasteful
+	gb->vram = (uint8_t*)calloc(0x2000, sizeof(uint8_t));
 	gb->bootstrap = bootcode;
 	open_romFile(&gb->cart); // Calls cart init
 
@@ -511,6 +554,7 @@ void gb_free(struct GB* gb)
 	free_cart(&gb->cart);
 	free_ppu(&gb->ppu);
 	free(gb->memory);
+	free(gb->vram);
 }
 
 // This only exists because the upper 3 bits of the 

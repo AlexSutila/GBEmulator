@@ -42,6 +42,34 @@ inline struct ppuCycleTimingInfo calcPpuTimingInfo(int current, int max, uint8_t
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////
 
+struct tileStruct
+{	// A section of VRAM consists of tiles, which are a collection of 16 bytes, forming
+	//		basically 8 rows of two bytes, where the 2 byte rows make up the color data
+	//		for the pixels of it's respective row in an 8 pixel by 8 pixel tile
+	uint8_t bytes[8][2];
+};
+
+struct spriteStruct
+{	// Another section of memory consists of object attribute memory, where an object or
+	//		sprite's data is made up of four bytes. Fairly simple.
+	uint8_t yPos, xPos, tileIndex;
+	union
+	{	// Using a bitfield for the fourth byte (attributes) to easily access specific bits
+		//		each of which have meaning
+		uint8_t attributes;
+		struct
+		{	// The first four bits are a CGB only thing, so using a funny name to avoid accidental use
+			/* Bits0-3 */ uint8_t amongUs         : 4; // Unused bits on DMG
+			/* Bit4    */ uint8_t paletteNumber   : 1; // (0=OBP0, 1=OBP1)
+			/* Bit5    */ uint8_t x_flip          : 1; // (0=Normal, 1=Horizontally mirrored)
+			/* Bit6    */ uint8_t y_flip          : 1; // (0=Normal, 1=Horizontally mirrored)
+			/* Bit7    */ uint8_t bgwin_over_objs : 1; // (0=No, 1=BG and Window colors 1-3 over the OBJ)
+		};
+	};
+};
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////
+
 struct bitmapStruct
 {	// BMI Struct which contains information for the bitmap, as well as the color palette
 	BITMAPINFO bmi;
@@ -83,6 +111,8 @@ enum statModeFlags
 	// TODO, work scanline 153 in because its weird and the reason why
 	//		I made my ppu_step function super flexible
 };
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct PPU 
 {	// Bitmap stuff
