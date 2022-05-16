@@ -165,6 +165,8 @@ void update_stat_signal(struct GB* gb)
 	// Update the signal, and trigger an interrupt if a rising edge is detected
 	gb->ppu.stat_irq_signal = cond1 || cond2 || cond3 || cond4;
 	if (gb->ppu.stat_irq_signal && !old) setIFBit(gb, 1);
+	// Update the ly is lyc bit
+	gb->ppu.ly_is_lyc = (gb->ppu.reg_ly == gb->ppu.reg_lyc);
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -212,11 +214,11 @@ uint8_t OBP1_RB(struct GB* gb, uint8_t cycles)
 }
 uint8_t WY_RB(struct GB* gb, uint8_t cycles)
 {
-	return gb->ppu.reg_wx;
+	return gb->ppu.reg_wy;
 }
 uint8_t WX_RB(struct GB* gb, uint8_t cycles)
 {
-	return gb->ppu.reg_wy;
+	return gb->ppu.reg_wx;
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -255,8 +257,8 @@ void STAT_WB(struct GB* gb, uint8_t val, uint8_t cycles) // NEEDS WORK
 {
 	ppu_step(gb, cycles);
 	// Mode bits (0 and 1) are read only and 8 is unused, don't write them
-	gb->ppu.reg_stat &= 0x83;
-	gb->ppu.reg_stat |= (val & ~0x83);
+	gb->ppu.reg_stat &= 0x87;
+	gb->ppu.reg_stat |= (val & ~0x87);
 	gb->sync_sel = 1;
 }
 void SCY_WB(struct GB* gb, uint8_t val, uint8_t cycles)
