@@ -82,12 +82,14 @@ void free_ppu(struct PPU* ppu)
 // PPU step function
 void ppu_step(struct GB* gb, int cycles) 
 {	// Look up tables for entry and exit functions for each PPU mode
-	static const uint8_t(*exitFuncs[4])(struct GB*) = { &lHBlank, &lVBlank, &lOamSearch, &lDataTrans };
-	static const void(*entryFuncs[4])(struct GB*)   = { &eHBlank, &eVBlank, &eOamSearch, &eDataTrans };
+	static const uint8_t(*exitFuncs[6])(struct GB*)
+		= { &lHBlank, &lVBlank, &lOamSearch, &lDataTrans, &lScanln153First4Cycles, &lScanln153RemainingCycles };
+	static const void(*entryFuncs[6])(struct GB*)
+		= { &eHBlank, &eVBlank, &eOamSearch, &eDataTrans, &eScanln153First4Cycles, &eScanln153RemainingCycles };
 	// Look up table for the maximum value of the dot counter for a given mode,
 	//		note, this value actually fluctuates, but I don't plan on emulating
 	//		the timing here perfectly, at least not just yet.
-	static const int maxDots[4] = { 456, 456, 80, 252 };
+	static const int maxDots[6] = { 456, 456, 80, 252, 4, 456 };
 	
 	// All cycles passed into the cycles parameter will be spent here. If cycles from one instruction
 	//		bleed into another PPU mode, then those cycles will still be spent here, in a seperate
@@ -103,15 +105,14 @@ void ppu_step(struct GB* gb, int cycles)
 		//		was in is now complete and it is time to start executing the next mode.
 		if (timing.leftOverCycles > 0 || oldDotCounter > gb->ppu.dotCounter)
 		{	// Since there are clock cycles that bled into the next mode, the exit function of the
-			//		old mode can be called. Also, update the stat mode bits.
+			//		old mode can be called. 
 			uint8_t newMode = (*exitFuncs[gb->ppu.state])(gb);
-			gb->ppu.mode_bits = newMode & 0x3;
 			// In addition, the entry function of the new mode being entered can be called. Which
 			//		function is called is determined by the next state logic of the exit function.
 			(*entryFuncs[newMode])(gb);
 			// The dot counter has only been incremented by the amount of spent cycles up to this
 			//		point. There are still cycles that have bled over into the new mode. The rest
-			//		is handled recursively. 
+			//		is handled recursively. Note, ppu.state is updated in exit functions. 
 			ppu_step(gb, timing.leftOverCycles);
 		}
 		// Update the internal stat irq signal, and trigger an interrupt when appropriate

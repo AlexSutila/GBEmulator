@@ -94,6 +94,12 @@ void eOamSearch(struct GB* gb);
 /* ----------------------------------- */
 uint8_t lDataTrans(struct GB* gb); // Mode 3
 void eDataTrans(struct GB* gb);
+/* ----------------------------------- */
+uint8_t lScanln153First4Cycles(struct GB* gb);
+void eScanln153First4Cycles(struct GB* gb);
+/* ----------------------------------- */
+uint8_t lScanln153RemainingCycles(struct GB* gb);
+void eScanln153RemainingCycles(struct GB* gb);
 
 // For real time synchronized video output
 void draw_to_screen(struct GB* gb, HWND window, HDC hdc);
@@ -104,17 +110,19 @@ void draw_to_screen(struct GB* gb, HWND window, HDC hdc);
 void update_stat_signal(struct GB* gb);
 
 // Enumeration for representing the mode values in the stat register
-//		for each PPU mode. The bottom two bits will align with the
-//		corresponding mode bits value that will appear when the PPU
-//		is in the respective mode. 
+//		for each PPU mode. 
 enum statModeFlags
 {
-	statModeHBlank    = 0b00,
-	statModeVBlank    = 0b01,
-	statModeOamSearch = 0b10,
-	statModeDataTrans = 0b11,
-	// TODO, work scanline 153 in because its weird and the reason why
-	//		I made my ppu_step function super flexible
+	statModeHBlank,           // All hblanks
+	statModeVBlank,           // All vblanks except the last scanline
+	statModeOamSearch,        // All OAM searches
+	statModeDataTrans,        // All Data transfers
+	// The next two represent two sections within the final scanline, scanline 153. For the
+	//		first four dots in scanline 153, the LY register behaves as normal, but after
+	//		these four cycles, the LY register is reset back to zero which could potentially
+	//		trigger an LY == LYC based stat interrupt
+	scanln153First4Cycles,    // First four cycles of scanline 153
+	scanln153RemainingCycles, // Everything proceeding the first four cycles
 };
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////

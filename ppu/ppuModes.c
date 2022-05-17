@@ -18,11 +18,13 @@ uint8_t lHBlank(struct GB* gb)
 {
 	// End of scanline, increment the value of the LY register
 	gb->ppu.reg_ly = gb->ppu.reg_ly + 1;
-	// HBlank usually switches to OAM search, but on scanline 143 it enters the first VBlank
+	// HBlank usually switches to OAM search, but after scanline 143 it enters the first VBlank
 	return (gb->ppu.reg_ly >= 144) ? statModeVBlank : statModeOamSearch;
 }
 void eHBlank(struct GB* gb)
 {
+	// Update the stat mode bits
+	gb->ppu.mode_bits = 0b00;
 	// Update the PPU mode
 	gb->ppu.state = statModeHBlank;
 }
@@ -31,31 +33,29 @@ uint8_t lVBlank(struct GB* gb)
 {
 	// End of scanline, increment the value of the LY register
 	gb->ppu.reg_ly = gb->ppu.reg_ly + 1;
-	// VBlank usually switches to the start of another VBlank, but on scanline 153 it goes
-	//		back to OAM search
-	if (gb->ppu.reg_ly == 154)
-	{	// Reset LY register back to zero, notify that the frame is complete
-		gb->ppu.frameIncomplete = 0;
-		gb->ppu.reg_ly = 0;
-		return statModeOamSearch;
-	}
-	else return statModeVBlank;
+	// VBlank usually switches to the start of another VBlank, but on scanline 153 it
+	//		needs to mimic the weird behavior that occurs during that scanline
+	return gb->ppu.reg_ly == 153 ? scanln153First4Cycles : statModeVBlank;
 }
 void eVBlank(struct GB* gb)
 {
-	// If on scanline 144, trigger vblank interrupt
-	if (gb->ppu.reg_ly == 144) setIFBit(gb, 0);
+	// Update the stat mode bits
+	gb->ppu.mode_bits = 0b01;
 	// Update the PPU mode
 	gb->ppu.state = statModeVBlank;
+	// If on scanline 144, trigger vblank interrupt
+	if (gb->ppu.reg_ly == 144) setIFBit(gb, 0);
 }
 /* Oam Search */
 uint8_t lOamSearch(struct GB* gb)
 {
-
+	// Always enters data transfer
 	return statModeDataTrans;
 }
 void eOamSearch(struct GB* gb)
 {
+	// Update the stat mode bits
+	gb->ppu.mode_bits = 0b10;
 	// Update the PPU mode
 	gb->ppu.state = statModeOamSearch;
 }
@@ -100,7 +100,40 @@ uint8_t lDataTrans(struct GB* gb)
 #undef TILEMAP_RES
 void eDataTrans(struct GB* gb)
 {
+	// Update the stat mode bits
+	gb->ppu.mode_bits = 0b11;
 	// Update the PPU mode
 	gb->ppu.state = statModeDataTrans;
 }
-
+/* The first four cycles of scanline 153 */
+uint8_t lScanln153First4Cycles(struct GB* gb)
+{
+	// At this point, the frame has been completed. The main loop executes
+	//		instructions until this ppu field is set to zero. Set this to
+	//		zero to break out of the loop and render the frame
+	gb->ppu.frameIncomplete = 0;
+	// It will always continue with the remaining cycles of the same scanline
+	return scanln153RemainingCycles;
+}
+void eScanln153First4Cycles(struct GB* gb)
+{
+	// Update the stat mode bits, not needed but doing it to be safe
+	gb->ppu.mode_bits = 0b01;
+	// Update the PPU mode
+	gb->ppu.state = scanln153First4Cycles;
+}
+/* The remains of scanline 153 after the four cycles */
+uint8_t lScanln153RemainingCycles(struct GB* gb)
+{
+	// This will always go back to OAM search
+	return statModeOamSearch;
+}
+void eScanln153RemainingCycles(struct GB* gb)
+{
+	// Update the stat mode bits, not needed but doing it to be safe
+	gb->ppu.mode_bits = 0b01;
+	// Update the PPU mode
+	gb->ppu.state = scanln153RemainingCycles;
+	// Here, the LY register is reset early
+	gb->ppu.reg_ly = 0x00;
+}
