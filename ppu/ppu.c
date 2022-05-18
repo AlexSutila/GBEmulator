@@ -256,7 +256,7 @@ void LCDC_WB(struct GB* gb, uint8_t val, uint8_t cycles) // NEEDS WORK
 	gb->ppu.reg_lcdc = val;
 	gb->sync_sel = 1;
 }
-void STAT_WB(struct GB* gb, uint8_t val, uint8_t cycles) // NEEDS WORK
+void STAT_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 {
 	ppu_step(gb, cycles);
 	// Mode bits (0 and 1) are read only and 8 is unused, don't write them
@@ -282,18 +282,47 @@ void LY_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 	// This value is read only, do not mess with this at all
 	gb->sync_sel = 1;
 }
-void LYC_WB(struct GB* gb, uint8_t val, uint8_t cycles) // NEEDS WORK
+void LYC_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 {
 	ppu_step(gb, cycles);
 	gb->ppu.reg_lyc = val;
 	gb->sync_sel = 1;
 }
-void DMA_WB(struct GB* gb, uint8_t val, uint8_t cycles) // NEEDS WORK
+// Note, I am doing my DMA transfers using a single memcpy within a single instruction. This is obviously
+//		not accurate at all. Software usually copies a short routine to wait for it to complete and this
+//		emulator will still emulate that just fine so it shouldn't matter much
+#define OAM_SIZE_BYTES 0xA0
+void DMA_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 {
 	ppu_step(gb, cycles);
 	gb->ppu.reg_dma = val;
+	// Perform data transfer
+	uint16_t start_addr = val << 8;
+	if (val >= 0x00 && val <= 0x3F) {
+		memcpy(gb->memory + 0xFE00, gb->cart.ROM00_ptr + start_addr, OAM_SIZE_BYTES);
+	}
+	else if (val >= 0x40 && val <= 0x7F) {
+		start_addr = start_addr - 0x4000;
+		memcpy(gb->memory + 0xFE00, gb->cart.ROMnn_ptr + start_addr, OAM_SIZE_BYTES);
+	}
+	else if (val >= 0x80 && val <= 0x9F) {
+		memcpy(gb->memory + 0xFE00, gb->memory + start_addr, OAM_SIZE_BYTES);
+	}
+	else if (val >= 0xA0 && val <= 0xBF) {
+		// TODO: This is not safe, do a check on this ram pointer before calling memcpy
+		start_addr = start_addr - 0xA000;
+		memcpy(gb->memory + 0xFE00, gb->cart.RAM_ptr + start_addr, OAM_SIZE_BYTES);
+	}
+	else if (val >= 0xC0 && val <= 0xDF) {
+		memcpy(gb->memory + 0xFE00, gb->memory + start_addr, OAM_SIZE_BYTES);
+	}
+	else if (val >= 0xE0 && val <= 0xFD) {
+		start_addr = start_addr - 0x2000; // Mirror of the address range 8 kilobytes back
+		memcpy(gb->memory + 0xFE00, gb->memory + start_addr, OAM_SIZE_BYTES);
+	}
 	gb->sync_sel = 1;
 }
+#undef OAM_SIZE_BYTES
 void BGP_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 {
 	ppu_step(gb, cycles);
