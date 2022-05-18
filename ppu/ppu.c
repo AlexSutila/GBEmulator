@@ -23,6 +23,8 @@ void init_ppu(struct PPU* ppu)
 	ppu->reg_bgp  = 0xFC;
 	ppu->reg_obp0 = 0xFF;
 	ppu->reg_obp1 = 0xFF;
+	// Initialize internal scanline counter for the window
+	ppu->win_ly = 0x00;
 
 	struct pixelColor 
 	{	// Helper structure for initializing the bitmap palette

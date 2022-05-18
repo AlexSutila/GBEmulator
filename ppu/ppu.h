@@ -133,7 +133,10 @@ struct PPU
 	void* bitmap;
 	// Actual PPU stuff
 	int dotCounter, frameIncomplete;
-	uint8_t state, stat_irq_signal;
+	// State - the current stae of the PPU
+	// stat_irq_signal - the internal signal which triggers the stat interrupt
+	// win_ly - the internal scanline counter for the window
+	uint8_t state, stat_irq_signal, win_ly;
 	// FF40 - LCD Control register
 	union
 	{
