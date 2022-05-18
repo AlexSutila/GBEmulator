@@ -13,6 +13,10 @@
 //		either transition to oam search or another vblank. Functions starting with the letter l,
 //		(exit functions) will return the next state the PPU should enter. 
 
+// Used in multiple functions for sprite rendering
+static const struct spriteStruct* g_visible_sprites[10] = {0};
+static int g_sprite_count = 0;
+
 /* Horizontal Blank */
 uint8_t lHBlank(struct GB* gb)
 {
@@ -49,6 +53,34 @@ void eVBlank(struct GB* gb)
 /* Oam Search */
 uint8_t lOamSearch(struct GB* gb)
 {
+	// Determine the height of all sprites, see lcdc bitfield
+	uint8_t sprite_height = gb->ppu.obj_size ? 16 : 8;
+	// Iterate over all sprites in OAM and find sprite count for current scanline
+	for (int sprite_index = 0; sprite_index < 40 && g_sprite_count < 10; sprite_index++)
+	{	// Fetch the current sprite's object attributes entry
+		const struct spriteStruct* cur_sprite = objattr_access(gb, sprite_index);
+		// Based on the object attributes, determine if the sprite is visible on the current scanline
+		if (cur_sprite->yPos + sprite_height - 16 > gb->ppu.reg_ly && cur_sprite->yPos - 16 <= gb->ppu.reg_ly)
+		{	// Place the pointer to the sprite in an array to be rendered later in data transfer
+			g_visible_sprites[g_sprite_count] = cur_sprite;
+			g_sprite_count++;
+		}
+	}
+	// Render order of the sprites matters, sort them based on X-coordinate. The sequential priority
+	//		is already handled because of how the for loop above works
+	int i = 1;
+	while (i < g_sprite_count) 
+	{
+		int j = i;
+		while (j > 0 && g_visible_sprites[j - 1]->xPos <= g_visible_sprites[j]->xPos)
+		{
+			const struct spriteStruct* temp = g_visible_sprites[j - 1];
+			g_visible_sprites[j - 1] = g_visible_sprites[j];
+			g_visible_sprites[j] = temp;
+			--j;
+		}
+		++i;
+	}
 	// Always enters data transfer
 	return statModeDataTrans;
 }
@@ -80,7 +112,9 @@ inline uint8_t create_color(const struct tileStruct* cur_tile, uint8_t pallete, 
 uint8_t lDataTrans(struct GB* gb)
 {	
 	// Create a pointer to the start of the scanline in the frame buffer
-	uint8_t* bitmap_ptr = (uint8_t*)(gb->ppu.bitmap) + (gb->ppu.reg_ly * v_HRES);// If the background and window are enabled, then draw the scanline to the frame buffer
+	uint8_t* bitmap_ptr = (uint8_t*)(gb->ppu.bitmap) + (gb->ppu.reg_ly * v_HRES);
+	
+	// If the background and window are enabled, then draw the scanline to the frame buffer
 	if (gb->ppu.bgwin_enable)
 	{	// Determine the point at which to stop rendering the background and start rendering the window
 		int bg_stop = (gb->ppu.reg_wx-7<v_HRES) && (gb->ppu.reg_wy<=gb->ppu.reg_ly) && gb->ppu.window_enable
@@ -130,6 +164,16 @@ uint8_t lDataTrans(struct GB* gb)
 		for (int i = 0; i < v_HRES; i++)
 			bitmap_ptr[i] = 0x00;
 	}
+
+	// If the objects are enabled, then draw them to the frame buffer, the number of sprites
+	//		and which sprites to draw are predetermined and stored in the global variables
+	//		above upon leaving oamSearch
+	for (int sprite_index = 0; sprite_index < g_sprite_count; sprite_index++)
+	{
+		// TODO: Draw sprite function? Maybe multiple?
+	}
+
+	// Always enter HBlank after this mode
 	return statModeHBlank;
 }
 #undef TILEMAP_RES
