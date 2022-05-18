@@ -78,7 +78,9 @@ inline uint8_t create_color(const struct tileStruct* cur_tile, uint8_t pallete, 
 }
 #define TILEMAP_RES  256 // 32 * 8 - Tile maps are 32 tiles times 8 pixels, both directions
 uint8_t lDataTrans(struct GB* gb)
-{	// If the background and window are enabled, then draw the scanline to the frame buffer
+{	
+	// Create a pointer to the start of the scanline in the frame buffer
+	uint8_t* bitmap_ptr = (uint8_t*)(gb->ppu.bitmap) + (gb->ppu.reg_ly * v_HRES);// If the background and window are enabled, then draw the scanline to the frame buffer
 	if (gb->ppu.bgwin_enable)
 	{	// Determine the point at which to stop rendering the background and start rendering the window
 		int bg_stop = (gb->ppu.reg_wx-7<v_HRES) && (gb->ppu.reg_wy<=gb->ppu.reg_ly) && gb->ppu.window_enable
@@ -89,8 +91,6 @@ uint8_t lDataTrans(struct GB* gb)
 		// Row calculations used later for indexing tilemaps and tiles
 		int row_index = ((gb->ppu.reg_ly + gb->ppu.reg_scy) % TILEMAP_RES) / 8;
 		int row_mod   = ((gb->ppu.reg_ly + gb->ppu.reg_scy) % TILEMAP_RES) % 8;
-		// Create a pointer to the start of the scanline in the frame buffer
-		uint8_t* bitmap_ptr = (uint8_t*)(gb->ppu.bitmap) + (gb->ppu.reg_ly * v_HRES);
 		// An index integer to keep track of the current pixel x position on the screen
 		int cur_pixel = 0;
 		// Start writing the background to the frame buffer
@@ -124,6 +124,11 @@ uint8_t lDataTrans(struct GB* gb)
 		}
 		// If the window was visible on this scanline, move the internal scanline counter along
 		if (bg_stop < v_HRES) gb->ppu.win_ly++;
+	}
+	else // If the bgwin enable is not enabled white is rendered instead
+	{
+		for (int i = 0; i < v_HRES; i++)
+			bitmap_ptr[i] = 0x00;
 	}
 	return statModeHBlank;
 }
