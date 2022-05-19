@@ -42,10 +42,29 @@ void draw_sprite(struct GB* gb, uint8_t* bitmap_ptr, const struct spriteStruct* 
 	for (int pixel_x = 0; pixel_x < 8; pixel_x++)
 	{
 		uint8_t col_mod = calc_col_mod(sprite_ptr, pixel_x);
-		// Calculate the color index from the earlier information
-		uint8_t color_index = create_color(cur_tile, obj_palette, row_mod, col_mod);
+		// 0xFF is a place holder that will be used to determine if the pixel should be written
+		//		or not. If index zero is used, the pixel is not drawn
+		uint8_t color_index = 0xFF;
 		// Create color, don't write if it is zero or if it goes off the scanline
-		if (color_index != 0 && sprite_x + pixel_x >= 0 && sprite_x + pixel_x < v_HRES) 
-			bitmap_ptr[sprite_x + pixel_x] = color_index;
+		if (sprite_x + pixel_x >= 0 && sprite_x + pixel_x < v_HRES)
+		{	// Pull pixel info from the fetched tile
+			uint8_t lo = (cur_tile->bytes[row_mod][1]) >> (7 - col_mod); // Lo corresponds to index 1 and hi to 0
+			uint8_t hi = (cur_tile->bytes[row_mod][0]) >> (7 - col_mod); // on purpose
+			// Construct color value from the given pixel data and write
+			switch (((lo & 0x1) << 1) | (hi & 0x1))
+			{
+			case 0x0: /* The pixel is ignored */                     break;
+			case 0x1: color_index = (obj_palette & 0b00001100) >> 2; break;
+			case 0x2: color_index = (obj_palette & 0b00110000) >> 4; break;
+			case 0x3: color_index = (obj_palette & 0b11000000) >> 6; break;
+			}
+			// Ignore the pixel if index 0 is being used
+			if (color_index == 0xFF) continue;
+			// Handle the weirdness with the bgwin priority bit
+			if ((sprite_ptr->bgwin_over_objs && bitmap_ptr[sprite_x + pixel_x] == gb->ppu.bg_color_idx0) || !sprite_ptr->bgwin_over_objs) 
+			{
+				bitmap_ptr[sprite_x + pixel_x] = color_index;
+			}
+		}
 	}
 }
