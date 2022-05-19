@@ -53,6 +53,7 @@ void eVBlank(struct GB* gb)
 /* Oam Search */
 uint8_t lOamSearch(struct GB* gb)
 {
+	g_sprite_count = 0;
 	// Determine the height of all sprites, see lcdc bitfield
 	uint8_t sprite_height = gb->ppu.obj_size ? 16 : 8;
 	// Iterate over all sprites in OAM and find sprite count for current scanline
@@ -157,9 +158,10 @@ uint8_t lDataTrans(struct GB* gb)
 	// If the objects are enabled, then draw them to the frame buffer, the number of sprites
 	//		and which sprites to draw are predetermined and stored in the global variables
 	//		above upon leaving oamSearch
-	for (int sprite_index = 0; sprite_index < g_sprite_count; sprite_index++)
-	{
-		// TODO: Draw sprite function? Maybe multiple?
+	if (gb->ppu.obj_enable)
+	{	// Test LCDC bit 1
+		for (int sprite_index = 0; sprite_index < g_sprite_count; sprite_index++)
+			draw_sprite(gb, bitmap_ptr, g_visible_sprites[sprite_index], gb->ppu.reg_ly);
 	}
 
 	// Always enter HBlank after this mode

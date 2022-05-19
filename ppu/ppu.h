@@ -87,6 +87,9 @@ inline uint8_t create_color(const struct tileStruct* cur_tile, uint8_t pallete, 
 	return 0x00;
 }
 
+// Used to draw a given sprite to the scanline who's beginning is pointed to by bitmap_ptr
+void draw_sprite(struct GB* gb, uint8_t* bitmap_ptr, const struct spriteStruct* sprite_ptr, uint8_t ly_val);
+
 // ////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct bitmapStruct

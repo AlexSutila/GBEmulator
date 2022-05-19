@@ -74,5 +74,8 @@
     <ClCompile Include="ppu\ppuModes.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ppu\sprites.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -160,6 +160,7 @@
     <ClCompile Include="mem.c" />
     <ClCompile Include="ppu\ppu.c" />
     <ClCompile Include="ppu\ppuModes.c" />
+    <ClCompile Include="ppu\sprites.c" />
     <ClCompile Include="serial.c" />
     <ClCompile Include="timers.c" />
   </ItemGroup>
