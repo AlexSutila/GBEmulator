@@ -73,11 +73,24 @@ void WB(struct GB* gb, uint16_t addr, uint8_t val, uint8_t cycles);
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Exists for the PPU to access tiles in the tile data section of VRAM. Two
-//		tile maps can be selected, and the background and window can be using
-//		two different tile maps at the same time so the base address of the 
-//		tile map needs to be provided. Use only 0x9800 or 0x9C00
-const struct tileStruct* tile_access(struct GB* gb, uint16_t map_base, uint16_t map_index);
+// Two different ways of indexing tile data
+enum tileAccessAddressingModes
+{	// These are based directly off of their corresponding values
+	//		in the LCDC register, single bit so either 0 or 1
+	tileAddrModeSigned   = 0,
+	tileAddrModeUnsigned = 1,
+};
+
+// Perform a lookup into a specific tile map to obtain a tile index, note there are only
+//		two tilemaps in memory, make sure the correct start addresses are used
+inline uint8_t tilemap_access(struct GB* gb, uint16_t map_base, uint16_t map_index)
+{	// Obtain the tile index from the tile map, selected by the map_base. Important, map_base
+	//		should only ever be 0x9800 or 0x9C00 as there are only two tile maps
+	return gb->vram[map_base + map_index - 0x8000];
+}
+// Access a specific tile, given the addressing mode (see tileAccessAddressingModes) and
+//		respective tile index
+const struct tileStruct* tiledata_access(struct GB* gb, int addr_mode, uint8_t tile_index);
 // Access a specific sprite, given the index into object attribute memory
 const struct spriteStruct* objattr_access(struct GB* gb, uint16_t index);
 

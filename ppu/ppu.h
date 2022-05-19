@@ -23,25 +23,6 @@ struct ppuCycleTimingInfo
 	uint8_t spentCycles, leftOverCycles;
 };
 
-// Calculate how many cycles were spent in a ppu mode and how many cycles are left over
-//		given the following:
-//		current - the current value of the dot counter (1 dot = 1 clock cycles, people
-//		          just call them dots when talking about the PPU, even in the docs
-//		max     - the max value of the dot counter for the current mode
-//		amount  - the amount of clock cycles to be stepped, determined by the
-//		          most recent cpu instruction executed
-inline struct ppuCycleTimingInfo calcPpuTimingInfo(int current, int max, uint8_t amount)
-{	// Calculate how many cycles are left over
-	uint8_t leftOverCycles = (current + amount >= max) ?
-		current + amount - max : 0;
-	// spentCycles are all cycles that are not leftover
-	uint8_t spentCycles = amount - leftOverCycles;
-	// See the ppuCycleTimingInfo struct above
-	return (struct ppuCycleTimingInfo) { spentCycles, leftOverCycles };
-}
-
-// ////////////////////////////////////////////////////////////////////////////////////////////////
-
 struct tileStruct
 {	// A section of VRAM consists of tiles, which are a collection of 16 bytes, forming
 	//		basically 8 rows of two bytes, where the 2 byte rows make up the color data
@@ -67,6 +48,44 @@ struct spriteStruct
 		};
 	};
 };
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Calculate how many cycles were spent in a ppu mode and how many cycles are left over
+//		given the following:
+//		current - the current value of the dot counter (1 dot = 1 clock cycles, people
+//		          just call them dots when talking about the PPU, even in the docs
+//		max     - the max value of the dot counter for the current mode
+//		amount  - the amount of clock cycles to be stepped, determined by the
+//		          most recent cpu instruction executed
+inline struct ppuCycleTimingInfo calcPpuTimingInfo(int current, int max, uint8_t amount)
+{	// Calculate how many cycles are left over
+	uint8_t leftOverCycles = (current + amount >= max) ?
+		current + amount - max : 0;
+	// spentCycles are all cycles that are not leftover
+	uint8_t spentCycles = amount - leftOverCycles;
+	// See the ppuCycleTimingInfo struct above
+	return (struct ppuCycleTimingInfo) { spentCycles, leftOverCycles };
+}
+
+// Used to extract the index into the physical bitmap palette from a tile at a specific
+//		pixel. The pallete argument for the virtual palette, as it can vary
+inline uint8_t create_color(const struct tileStruct* cur_tile, uint8_t pallete, int row_mod, int col_mod)
+{
+	// Pull pixel info from the fetched tile
+	uint8_t lo = (cur_tile->bytes[row_mod][1]) >> (7 - col_mod); // Lo corresponds to index 1 and hi to 0
+	uint8_t hi = (cur_tile->bytes[row_mod][0]) >> (7 - col_mod); // on purpose
+	// Construct color value from the given pixel data and write
+	switch (((lo & 0x1) << 1) | (hi & 0x1))
+	{
+	case 0x0: return  pallete & 0b00000011;
+	case 0x1: return (pallete & 0b00001100) >> 2;
+	case 0x2: return (pallete & 0b00110000) >> 4;
+	case 0x3: return (pallete & 0b11000000) >> 6;
+	}
+	// The switch should always return a value, this is here to avoid compiler warnings
+	return 0x00;
+}
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////
 

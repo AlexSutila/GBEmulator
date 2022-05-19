@@ -395,22 +395,24 @@ void WB(struct GB* gb, uint16_t addr, uint8_t val, uint8_t cycles)
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define VRAM_BASE_ADDR 0x8000
 // Access a specific tile, given the tile map base address and index
-const struct tileStruct* tile_access(struct GB* gb, uint16_t map_base, uint16_t map_index)
-{	// Obtain the tile index from the tile map, selected by the map_base. Important, map_base
-	//		should only ever be 0x9800 or 0x9C00 as there are only two tile maps
-	uint8_t tiledata_index = gb->vram[map_base + map_index - VRAM_BASE_ADDR];
-	// Tiles are indexed one of two ways, using either signed or unsigned addressing. This is
+const struct tileStruct* tiledata_access(struct GB* gb, int addr_mode, uint8_t tile_index)
+{	// Tiles are indexed one of two ways, using either signed or unsigned addressing. This is
 	//		determined by LCDC bit 4
-	if (gb->ppu.bgwin_tiledata)
+	if (addr_mode == tileAddrModeUnsigned)
 	{	// Unsigned tile addressing, uses 0x8000 as base pointer
-		return (struct tileStruct*)&gb->vram[tiledata_index*sizeof(struct tileStruct)];
+		return (struct tileStruct*)&gb->vram[tile_index*sizeof(struct tileStruct)];
+	}
+	else if (addr_mode == tileAddrModeSigned)
+	{	// Signed tile addressing, uses 0x9000 as base pointer
+		int16_t signed_index = (int16_t)(int8_t)tile_index;
+		return (struct tileStruct*)&gb->vram[0x1000+(signed_index*sizeof(struct tileStruct))];
 	}
 	else
-	{	// Signed tile addressing, uses 0x9000 as base pointer
-		int16_t signed_index = (int16_t)(int8_t)tiledata_index;
-		return (struct tileStruct*)&gb->vram[0x1000+(signed_index*sizeof(struct tileStruct))];
+	{
+		// TODO: some kind of error handling because there are only two applicable
+		//		addressing modes to be used here
+		return NULL;
 	}
 }
 // Access a specific sprite, given the index into object attribute memory
@@ -419,7 +421,6 @@ const struct spriteStruct* objattr_access(struct GB* gb, uint16_t index)
 	struct spriteStruct* sprites = (struct spriteStruct*)(gb->memory + 0xFE00);
 	return &sprites[index];
 }
-#undef VRAM_BASE_ADDR
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////
 

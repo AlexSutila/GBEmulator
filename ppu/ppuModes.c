@@ -92,22 +92,6 @@ void eOamSearch(struct GB* gb)
 	gb->ppu.state = statModeOamSearch;
 }
 /* Data Transfer */
-inline uint8_t create_color(const struct tileStruct* cur_tile, uint8_t pallete, int row_mod, int col_mod)
-{
-	// Pull pixel info from the fetched tile
-	uint8_t lo = (cur_tile->bytes[row_mod][1]) >> (7 - col_mod); // Lo corresponds to index 1 and hi to 0
-	uint8_t hi = (cur_tile->bytes[row_mod][0]) >> (7 - col_mod); // on purpose
-	// Construct color value from the given pixel data and write
-	switch (((lo & 0x1) << 1) | (hi & 0x1))
-	{
-	case 0x0: return  pallete & 0b00000011;
-	case 0x1: return (pallete & 0b00001100) >> 2;
-	case 0x2: return (pallete & 0b00110000) >> 4;
-	case 0x3: return (pallete & 0b11000000) >> 6;
-	}
-	// The switch should always return a value, this is here to avoid compiler warnings
-	return 0x00;
-}
 #define TILEMAP_RES  256 // 32 * 8 - Tile maps are 32 tiles times 8 pixels, both directions
 uint8_t lDataTrans(struct GB* gb)
 {	
@@ -116,7 +100,10 @@ uint8_t lDataTrans(struct GB* gb)
 	
 	// If the background and window are enabled, then draw the scanline to the frame buffer
 	if (gb->ppu.bgwin_enable)
-	{	// Determine the point at which to stop rendering the background and start rendering the window
+	{	// Save the current addressing mode used to index tile data, note the enum entries in mem.h
+		//		correspond directly with the value of the bgwin_tiledata area bit
+		int tiledata_addr_mode = gb->ppu.bgwin_tiledata; 
+		// Determine the point at which to stop rendering the background and start rendering the window
 		int bg_stop = (gb->ppu.reg_wx-7<v_HRES) && (gb->ppu.reg_wy<=gb->ppu.reg_ly) && gb->ppu.window_enable
 			? gb->ppu.reg_wx - 7 : v_HRES;
 		// Determine the tile map base address for the background and window
@@ -134,7 +121,8 @@ uint8_t lDataTrans(struct GB* gb)
 			const int col_mod   = ((cur_pixel + gb->ppu.reg_scx) % TILEMAP_RES) % 8;
 			// Obtain the base address of the tile with calculated index
 			uint16_t bg_map_index = col_index + (row_index * 32); // tilemaps are 32 x 32 tiles
-			const struct tileStruct* cur_tile = tile_access(gb, bg_map_base, bg_map_index);
+			uint8_t bg_tiledata_index = tilemap_access(gb, bg_map_base, bg_map_index);
+			const struct tileStruct* cur_tile = tiledata_access(gb, tiledata_addr_mode, bg_tiledata_index);
 			// Pull pixel info from the fetched tile
 			bitmap_ptr[cur_pixel] = create_color(cur_tile, gb->ppu.reg_bgp, row_mod, col_mod);
 			++cur_pixel;
@@ -151,7 +139,8 @@ uint8_t lDataTrans(struct GB* gb)
 			const int col_mod   = (win_cur_pixel % TILEMAP_RES) % 8;
 			// Obtain the base address of the tile with calculated index
 			uint16_t win_map_index = col_index + (row_index * 32);
-			const struct tileStruct* cur_tile = tile_access(gb, win_map_base, win_map_index);
+			uint8_t win_tiledata_index = tilemap_access(gb, win_map_base, win_map_index);
+			const struct tileStruct* cur_tile = tiledata_access(gb, tiledata_addr_mode, win_tiledata_index);
 			// Pull pixel info from the fetched tile
 			bitmap_ptr[cur_pixel] = create_color(cur_tile, gb->ppu.reg_bgp, row_mod, col_mod);
 			++cur_pixel; ++win_cur_pixel;
