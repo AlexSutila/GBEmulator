@@ -19,6 +19,7 @@ void init_ppu(struct PPU* ppu)
 	ppu->reg_scx  = 0x00;
 	ppu->reg_scy  = 0x00;
 	ppu->reg_ly   = 0x00;
+	ppu->reg_lyc  = 0x00;
 	ppu->reg_dma  = 0xFF;
 	ppu->reg_bgp  = 0xFC;
 	ppu->reg_obp0 = 0xFF;
