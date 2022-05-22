@@ -300,26 +300,27 @@ void DMA_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 	// Perform data transfer
 	uint16_t start_addr = val << 8;
 	if (val >= 0x00 && val <= 0x3F) {
-		memcpy(gb->memory + 0xFE00, gb->cart.ROM00_ptr + start_addr, OAM_SIZE_BYTES);
+		memcpy(gb->oam, gb->cart.ROM00_ptr + start_addr, OAM_SIZE_BYTES);
 	}
 	else if (val >= 0x40 && val <= 0x7F) {
 		start_addr = start_addr - 0x4000;
-		memcpy(gb->memory + 0xFE00, gb->cart.ROMnn_ptr + start_addr, OAM_SIZE_BYTES);
+		memcpy(gb->oam, gb->cart.ROMnn_ptr + start_addr, OAM_SIZE_BYTES);
 	}
 	else if (val >= 0x80 && val <= 0x9F) {
-		memcpy(gb->memory + 0xFE00, gb->memory + start_addr, OAM_SIZE_BYTES);
+		memcpy(gb->oam, gb->vram + start_addr, OAM_SIZE_BYTES);
 	}
 	else if (val >= 0xA0 && val <= 0xBF) {
 		// TODO: This is not safe, do a check on this ram pointer before calling memcpy
 		start_addr = start_addr - 0xA000;
-		memcpy(gb->memory + 0xFE00, gb->cart.RAM_ptr + start_addr, OAM_SIZE_BYTES);
+		memcpy(gb->oam, gb->cart.RAM_ptr + start_addr, OAM_SIZE_BYTES);
 	}
 	else if (val >= 0xC0 && val <= 0xDF) {
-		memcpy(gb->memory + 0xFE00, gb->memory + start_addr, OAM_SIZE_BYTES);
+		start_addr = start_addr - 0xC000;
+		memcpy(gb->oam, gb->iram + start_addr, OAM_SIZE_BYTES);
 	}
 	else if (val >= 0xE0 && val <= 0xFD) {
-		start_addr = start_addr - 0x2000; // Mirror of the address range 8 kilobytes back
-		memcpy(gb->memory + 0xFE00, gb->memory + start_addr, OAM_SIZE_BYTES);
+		start_addr = start_addr - 0xE000; // Mirror of the address range 8 kilobytes back
+		memcpy(gb->oam, gb->iram + start_addr, OAM_SIZE_BYTES);
 	}
 	gb->sync_sel = 1;
 }

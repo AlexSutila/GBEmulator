@@ -197,7 +197,8 @@ uint8_t RB(struct GB* gb, uint16_t addr, uint8_t cycles)
 
 	// Cart read or bootrom
 	if (addr >= 0x0000 && addr <= 0x00FF) {
-		if (gb->memory[0xFF50] != 0x01) return gb->bootstrap[addr];
+		// This particular IO register controlls the banking of the bootrom
+		if (gb->ioregs[0x50] != 0x01) return gb->bootstrap[addr];
 		else return (*gb->cart.memAccess)(&gb->cart, addr, 0xFF, CART_READ);
 	}
 	// Cart read - ROM
@@ -212,22 +213,35 @@ uint8_t RB(struct GB* gb, uint16_t addr, uint8_t cycles)
 	else if (addr >= 0xA000 && addr <= 0xBFFF) {
 		return (*gb->cart.memAccess)(&gb->cart, addr, 0xFF, CART_READ);
 	}
-	// ECHO memory 
-	else if (addr >= 0xE000 && addr <= 0xDDFF) {
-		return gb->memory[addr - 0x2000];
+	// Internal ram
+	else if (addr >= 0xC000 && addr <= 0xDFFF) {
+		return gb->iram[addr - 0xC000];
 	}
-	// Unusable - reads always FF?
-	else if (addr >= 0xFEA0 && addr <= 0xFEFF) {
-		return 0xFF;
+	// ECHO memory 
+	else if (addr >= 0xE000 && addr <= 0xFDFF) {
+		return gb->iram[addr - 0xE000];
+	}
+	// Object attribute memory
+	else if (addr >= 0xFE00 && addr <= 0xFE9F) {
+		return gb->oam[addr - 0xFE00];
 	}
 	// Mapped IO
 	else if (addr >= 0xFF00 && addr <= 0xFF7F) {
 		uint8_t const (*readFunc)(struct GB*, uint8_t) = IO_reads[addr - 0xFF00];
 		if (readFunc != NULL) return (*readFunc)(gb, cycles);
-		else return gb->memory[addr];
+		else return gb->ioregs[addr - 0xFF00];
 	}
-	// Rest of memory
-	else return gb->memory[addr];
+	// High ram
+	else if (addr >= 0xFF80 && addr <= 0xFFFE) {
+		return gb->hram[addr - 0xFF80];
+	}
+	// Interrupt enable register
+	else if (addr == 0xFFFF) {
+		return gb->reg_IE;
+	}
+	// Address ranges not covered by the if else chain above are typically
+	//		not supposed to be used (says nintendo), usually reads 0xFF
+	else return 0xFF;
 }
 
 void WB(struct GB* gb, uint16_t addr, uint8_t val, uint8_t cycles)
@@ -375,22 +389,34 @@ void WB(struct GB* gb, uint16_t addr, uint8_t val, uint8_t cycles)
 	else if (addr >= 0xA000 && addr <= 0xBFFF) {
 		(*gb->cart.memAccess)(&gb->cart, addr, val, CART_WRITE);
 	}
-	// ECHO memory 
-	else if (addr >= 0xE000 && addr <= 0xDDFF) {
-		gb->memory[addr - 0x2000] = val;
+	// Internal ram
+	else if (addr >= 0xC000 && addr <= 0xDFFF) {
+		gb->iram[addr - 0xC000] = val;
 	}
-	// Unusable 
-	else if (addr >= 0xFEA0 && addr <= 0xFEFF) {
-		return; // Writes to this address range are ignored
+	// ECHO memory 
+	else if (addr >= 0xE000 && addr <= 0xFDFF) {
+		gb->iram[addr - 0xE000] = val;
+	}
+	// Object attribute memory
+	else if (addr >= 0xFE00 && addr <= 0xFE9F) {
+		gb->oam[addr - 0xFE00] = val;
 	}
 	// Mapped IO
 	else if (addr >= 0xFF00 && addr <= 0xFF7F) {
 		void const (*writeFunc)(struct GB*, uint8_t, uint8_t) = IO_writes[addr - 0xFF00];
 		if (writeFunc != NULL) (*writeFunc)(gb, val, cycles);
-		else gb->memory[addr] = val;
+		else gb->ioregs[addr - 0xFF00] = val;
 	}
-	// Rest of memory
-	else gb->memory[addr] = val;
+	// High ram
+	else if (addr >= 0xFF80 && addr <= 0xFFFE) {
+		gb->hram[addr - 0xFF80] = val;
+	}
+	// Interrupt enable register
+	else if (addr == 0xFFFF) {
+		gb->reg_IE = val;
+	}
+	// Writes to areas not covered by the if else chain aboveare typically 
+	//		not writable, and the writes will be ignored
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -418,7 +444,7 @@ const struct tileStruct* tiledata_access(struct GB* gb, int addr_mode, uint8_t t
 // Access a specific sprite, given the index into object attribute memory
 const struct spriteStruct* objattr_access(struct GB* gb, uint16_t index)
 {
-	struct spriteStruct* sprites = (struct spriteStruct*)(gb->memory + 0xFE00);
+	struct spriteStruct* sprites = (struct spriteStruct*)(gb->oam);
 	return &sprites[index];
 }
 
@@ -428,120 +454,123 @@ void gb_init(struct GB* gb)
 {
 	// Memory initializations
 	gb->sync_sel = 0;
-	gb->memory = (uint8_t*)calloc(0x10000, sizeof(uint8_t)); // Do not plan on sticking with this 
-	                                                         // use of direct addressing, wasteful
-	gb->vram = (uint8_t*)calloc(0x2000, sizeof(uint8_t));
+	// Allocate space for memory blocks
+	gb->vram   = (uint8_t*)calloc(0x2000, sizeof(uint8_t));
+	gb->iram   = (uint8_t*)calloc(0x2000, sizeof(uint8_t));
+	gb->oam    = (uint8_t*)calloc(0x00A0, sizeof(uint8_t));
+	gb->ioregs = (uint8_t*)calloc(0x0080, sizeof(uint8_t));
+	gb->hram   = (uint8_t*)calloc(0x007F, sizeof(uint8_t));
 	gb->bootstrap = bootcode;
 	open_romFile(&gb->cart); // Calls cart init
 
 	// Initializing mapped IO to boot values - need to double check these
-	gb->memory[0xFF00] = 0xCF;
-	gb->memory[0xFF02] = 0x7E;
-	gb->memory[0xFF03] = 0xFF;
-	gb->memory[0xFF07] = 0xF8;
-	gb->memory[0xFF08] = 0xFF;
-	gb->memory[0xFF09] = 0xFF;
-	gb->memory[0xFF0A] = 0xFF;
-	gb->memory[0xFF0B] = 0xFF;
-	gb->memory[0xFF0C] = 0xFF;
-	gb->memory[0xFF0D] = 0xFF;
-	gb->memory[0xFF0E] = 0xFF;
-	gb->memory[0xFF0F] = 0xE1;
-	gb->memory[0xFF10] = 0x80;
-	gb->memory[0xFF11] = 0xBF;
-	gb->memory[0xFF12] = 0xF3;
-	gb->memory[0xFF13] = 0xFF;
-	gb->memory[0xFF14] = 0xBF;
-	gb->memory[0xFF15] = 0xFF;
-	gb->memory[0xFF16] = 0x3F;
-	gb->memory[0xFF17] = 0x00;
-	gb->memory[0xFF18] = 0xFF;
-	gb->memory[0xFF19] = 0xBF;
-	gb->memory[0xFF1A] = 0x7F;
-	gb->memory[0xFF1B] = 0xFF;
-	gb->memory[0xFF1C] = 0x9F;
-	gb->memory[0xFF1D] = 0xFF;
-	gb->memory[0xFF1E] = 0xBF;
-	gb->memory[0xFF1F] = 0xFF;
-	gb->memory[0xFF20] = 0xFF;
-	gb->memory[0xFF23] = 0xBF;
-	gb->memory[0xFF24] = 0x77;
-	gb->memory[0xFF25] = 0xF3;
-	gb->memory[0xFF26] = 0xF1;
-	gb->memory[0xFF27] = 0xFF;
-	gb->memory[0xFF28] = 0xFF;
-	gb->memory[0xFF29] = 0xFF;
-	gb->memory[0xFF2A] = 0xFF;
-	gb->memory[0xFF2B] = 0xFF;
-	gb->memory[0xFF2C] = 0xFF;
-	gb->memory[0xFF2D] = 0xFF;
-	gb->memory[0xFF2E] = 0xFF;
-	gb->memory[0xFF2F] = 0xFF;
-	gb->memory[0xFF31] = 0xFF;
-	gb->memory[0xFF33] = 0xFF;
-	gb->memory[0xFF35] = 0xFF;
-	gb->memory[0xFF37] = 0xFF;
-	gb->memory[0xFF39] = 0xFF;
-	gb->memory[0xFF3B] = 0xFF;
-	gb->memory[0xFF3D] = 0xFF;
-	gb->memory[0xFF3F] = 0xFF;
-	gb->memory[0xFF41] = 0x81;
-	gb->memory[0xFF46] = 0xFF;
-	gb->memory[0xFF47] = 0xFC;
-	gb->memory[0xFF48] = 0xFF;
-	gb->memory[0xFF49] = 0xFF;
-	gb->memory[0xFF4C] = 0xFF;
-	gb->memory[0xFF4D] = 0xFF;
-	gb->memory[0xFF4E] = 0xFF;
-	gb->memory[0xFF4F] = 0xFF;
-	gb->memory[0xFF50] = 0xFF;
-	gb->memory[0xFF51] = 0xFF;
-	gb->memory[0xFF52] = 0xFF;
-	gb->memory[0xFF53] = 0xFF;
-	gb->memory[0xFF54] = 0xFF;
-	gb->memory[0xFF55] = 0xFF;
-	gb->memory[0xFF56] = 0xFF;
-	gb->memory[0xFF57] = 0xFF;
-	gb->memory[0xFF58] = 0xFF;
-	gb->memory[0xFF59] = 0xFF;
-	gb->memory[0xFF5A] = 0xFF;
-	gb->memory[0xFF5B] = 0xFF;
-	gb->memory[0xFF5C] = 0xFF;
-	gb->memory[0xFF5D] = 0xFF;
-	gb->memory[0xFF5E] = 0xFF;
-	gb->memory[0xFF5F] = 0xFF;
-	gb->memory[0xFF60] = 0xFF;
-	gb->memory[0xFF61] = 0xFF;
-	gb->memory[0xFF62] = 0xFF;
-	gb->memory[0xFF63] = 0xFF;
-	gb->memory[0xFF64] = 0xFF;
-	gb->memory[0xFF65] = 0xFF;
-	gb->memory[0xFF66] = 0xFF;
-	gb->memory[0xFF67] = 0xFF;
-	gb->memory[0xFF68] = 0xFF;
-	gb->memory[0xFF69] = 0xFF;
-	gb->memory[0xFF6A] = 0xFF;
-	gb->memory[0xFF6B] = 0xFF;
-	gb->memory[0xFF6C] = 0xFF;
-	gb->memory[0xFF6D] = 0xFF;
-	gb->memory[0xFF6E] = 0xFF;
-	gb->memory[0xFF6F] = 0xFF;
-	gb->memory[0xFF70] = 0xFF;
-	gb->memory[0xFF71] = 0xFF;
-	gb->memory[0xFF72] = 0xFF;
-	gb->memory[0xFF73] = 0xFF;
-	gb->memory[0xFF74] = 0xFF;
-	gb->memory[0xFF75] = 0xFF;
-	gb->memory[0xFF76] = 0xFF;
-	gb->memory[0xFF77] = 0xFF;
-	gb->memory[0xFF78] = 0xFF;
-	gb->memory[0xFF79] = 0xFF;
-	gb->memory[0xFF7A] = 0xFF;
-	gb->memory[0xFF7B] = 0xFF;
-	gb->memory[0xFF7C] = 0xFF;
-	gb->memory[0xFF7D] = 0xFF;
-	gb->memory[0xFF7E] = 0xFF;
-	gb->memory[0xFF7F] = 0xFF;
+	gb->ioregs[0x00] = 0xCF;
+	gb->ioregs[0x02] = 0x7E;
+	gb->ioregs[0x03] = 0xFF;
+	gb->ioregs[0x07] = 0xF8;
+	gb->ioregs[0x08] = 0xFF;
+	gb->ioregs[0x09] = 0xFF;
+	gb->ioregs[0x0A] = 0xFF;
+	gb->ioregs[0x0B] = 0xFF;
+	gb->ioregs[0x0C] = 0xFF;
+	gb->ioregs[0x0D] = 0xFF;
+	gb->ioregs[0x0E] = 0xFF;
+	gb->ioregs[0x0F] = 0xE1;
+	gb->ioregs[0x10] = 0x80;
+	gb->ioregs[0x11] = 0xBF;
+	gb->ioregs[0x12] = 0xF3;
+	gb->ioregs[0x13] = 0xFF;
+	gb->ioregs[0x14] = 0xBF;
+	gb->ioregs[0x15] = 0xFF;
+	gb->ioregs[0x16] = 0x3F;
+	gb->ioregs[0x17] = 0x00;
+	gb->ioregs[0x18] = 0xFF;
+	gb->ioregs[0x19] = 0xBF;
+	gb->ioregs[0x1A] = 0x7F;
+	gb->ioregs[0x1B] = 0xFF;
+	gb->ioregs[0x1C] = 0x9F;
+	gb->ioregs[0x1D] = 0xFF;
+	gb->ioregs[0x1E] = 0xBF;
+	gb->ioregs[0x1F] = 0xFF;
+	gb->ioregs[0x20] = 0xFF;
+	gb->ioregs[0x23] = 0xBF;
+	gb->ioregs[0x24] = 0x77;
+	gb->ioregs[0x25] = 0xF3;
+	gb->ioregs[0x26] = 0xF1;
+	gb->ioregs[0x27] = 0xFF;
+	gb->ioregs[0x28] = 0xFF;
+	gb->ioregs[0x29] = 0xFF;
+	gb->ioregs[0x2A] = 0xFF;
+	gb->ioregs[0x2B] = 0xFF;
+	gb->ioregs[0x2C] = 0xFF;
+	gb->ioregs[0x2D] = 0xFF;
+	gb->ioregs[0x2E] = 0xFF;
+	gb->ioregs[0x2F] = 0xFF;
+	gb->ioregs[0x31] = 0xFF;
+	gb->ioregs[0x33] = 0xFF;
+	gb->ioregs[0x35] = 0xFF;
+	gb->ioregs[0x37] = 0xFF;
+	gb->ioregs[0x39] = 0xFF;
+	gb->ioregs[0x3B] = 0xFF;
+	gb->ioregs[0x3D] = 0xFF;
+	gb->ioregs[0x3F] = 0xFF;
+	gb->ioregs[0x41] = 0x81;
+	gb->ioregs[0x46] = 0xFF;
+	gb->ioregs[0x47] = 0xFC;
+	gb->ioregs[0x48] = 0xFF;
+	gb->ioregs[0x49] = 0xFF;
+	gb->ioregs[0x4C] = 0xFF;
+	gb->ioregs[0x4D] = 0xFF;
+	gb->ioregs[0x4E] = 0xFF;
+	gb->ioregs[0x4F] = 0xFF;
+	gb->ioregs[0x50] = 0xFF;
+	gb->ioregs[0x51] = 0xFF;
+	gb->ioregs[0x52] = 0xFF;
+	gb->ioregs[0x53] = 0xFF;
+	gb->ioregs[0x54] = 0xFF;
+	gb->ioregs[0x55] = 0xFF;
+	gb->ioregs[0x56] = 0xFF;
+	gb->ioregs[0x57] = 0xFF;
+	gb->ioregs[0x58] = 0xFF;
+	gb->ioregs[0x59] = 0xFF;
+	gb->ioregs[0x5A] = 0xFF;
+	gb->ioregs[0x5B] = 0xFF;
+	gb->ioregs[0x5C] = 0xFF;
+	gb->ioregs[0x5D] = 0xFF;
+	gb->ioregs[0x5E] = 0xFF;
+	gb->ioregs[0x5F] = 0xFF;
+	gb->ioregs[0x60] = 0xFF;
+	gb->ioregs[0x61] = 0xFF;
+	gb->ioregs[0x62] = 0xFF;
+	gb->ioregs[0x63] = 0xFF;
+	gb->ioregs[0x64] = 0xFF;
+	gb->ioregs[0x65] = 0xFF;
+	gb->ioregs[0x66] = 0xFF;
+	gb->ioregs[0x67] = 0xFF;
+	gb->ioregs[0x68] = 0xFF;
+	gb->ioregs[0x69] = 0xFF;
+	gb->ioregs[0x6A] = 0xFF;
+	gb->ioregs[0x6B] = 0xFF;
+	gb->ioregs[0x6C] = 0xFF;
+	gb->ioregs[0x6D] = 0xFF;
+	gb->ioregs[0x6E] = 0xFF;
+	gb->ioregs[0x6F] = 0xFF;
+	gb->ioregs[0x70] = 0xFF;
+	gb->ioregs[0x71] = 0xFF;
+	gb->ioregs[0x72] = 0xFF;
+	gb->ioregs[0x73] = 0xFF;
+	gb->ioregs[0x74] = 0xFF;
+	gb->ioregs[0x75] = 0xFF;
+	gb->ioregs[0x76] = 0xFF;
+	gb->ioregs[0x77] = 0xFF;
+	gb->ioregs[0x78] = 0xFF;
+	gb->ioregs[0x79] = 0xFF;
+	gb->ioregs[0x7A] = 0xFF;
+	gb->ioregs[0x7B] = 0xFF;
+	gb->ioregs[0x7C] = 0xFF;
+	gb->ioregs[0x7D] = 0xFF;
+	gb->ioregs[0x7E] = 0xFF;
+	gb->ioregs[0x7F] = 0xFF;
 
 	// Initialize other components
 	cpu_init(&gb->cpu);
@@ -554,13 +583,16 @@ void gb_free(struct GB* gb)
 {
 	free_cart(&gb->cart);
 	free_ppu(&gb->ppu);
-	free(gb->memory);
 	free(gb->vram);
+	free(gb->iram);
+	free(gb->oam);
+	free(gb->ioregs);
+	free(gb->hram);
 }
 
 // This only exists because the upper 3 bits of the 
 //		IF register should always read as 1
 uint8_t IF_RB(struct GB* gb, uint8_t cycles)
 {
-	return gb->memory[0xFF0F] | 0xE0;
+	return gb->ioregs[0x0F] | 0xE0;
 }

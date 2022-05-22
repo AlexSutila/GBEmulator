@@ -628,7 +628,7 @@ int int_request(struct GB* gb, int cycles)
 	static const uint16_t intVectors[5] = { 0x0040, 0x0048, 0x0050, 0x0058, 0x0060 };
 
 	// Update scheduler, setting IME if needed
-	uint8_t IF = gb->memory[0xFF0F], IE = gb->memory[0xFFFF];
+	uint8_t IF = gb->ioregs[0x0F], IE = gb->reg_IE;
 	gb->cpu.IME_scheduler >>= (cycles >> 2);
 	if (gb->cpu.IME_scheduler & 0x3FFF) gb->cpu.IME = 1;
 
@@ -654,7 +654,7 @@ int int_request(struct GB* gb, int cycles)
 			WB(gb, --gb->cpu.SP, (gb->cpu.PC & 0x00FF), 0);
 
 			// Clear flag bits and update PC
-			gb->memory[0xFF0F] &= bitmasks[i];
+			gb->ioregs[0x0F] &= bitmasks[i];
 			gb->cpu.PC = intVectors[i];
 
 			// Return cycles used to service the interrupt

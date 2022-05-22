@@ -23,10 +23,10 @@ void SC_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 	{
 		// Note, only bits 7 and 0 are actually relevant
 
-		gb->memory[0xFF02] = 0x01; // Clear transfer in progress bit
-		gb->memory[0xFF01] = 0xFF; // No connection, read all ones
+		gb->ioregs[0x02] = 0x01; // Clear transfer in progress bit
+		gb->ioregs[0x01] = 0xFF; // No connection, read all ones
 
 		// Request serial interrupt immediately because I am lazy
-		gb->memory[0xFF0F] |= 0x08; 
+		gb->ioregs[0x0F] |= 0x08;
 	}
 }
