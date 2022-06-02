@@ -5,9 +5,9 @@ Written entirely in C using win32 for graphical related things. In its current
 state it passes all blargs cpu instruction and memory access timing tests and
 dmg acid 2 to prove basic graphical accuracy. 
 
-There are still lots of inaccuracies and areas that I'm not happy with and I 
-plan on rewriting a lot of it. Keep in mind this is still very much a work in 
-progress. I also have yet to implement any sound support. 
+There are still lots of inaccuracies that I may fine tune as I see fit when
+I run into compatability issues I have a problem with. I still have yet to
+add any sound support, so I may return to do that in the future as well.
 
 ![passing tests](https://user-images.githubusercontent.com/96510931/152865596-5f94be09-f963-4f6f-bc8c-cf6852a817db.png)
 
