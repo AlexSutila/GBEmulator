@@ -157,12 +157,7 @@ void TIMA_WB(struct GB* gb, uint8_t val, uint8_t cycles)
 	// Suncrhonize the component to catch it up before the write and
 	//		then update the value of the tima register
 	timers_step(gb, cycles);
-	// If the tima is written while it is being reloaded with the tma
-	//		(this actually happens 4 cycles later than you would expect,
-	//		then the write is ignored.
-	uint8_t diff = cyclesSinceOverflow(gb->timer.counterValue, gb->timer.freqSelect);
-	// Ignore write if happening during tima reload with tma
-	if (diff < 4 || diff >= 8) gb->timer.reg_tima = val;
+	gb->timer.reg_tima = val;
 	gb->sync_sel = 2;
 }
 
